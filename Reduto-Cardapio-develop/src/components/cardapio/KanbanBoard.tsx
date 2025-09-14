@@ -870,7 +870,7 @@ export function KanbanBoard() {
         </div>
 
         {/* Kanban Columns */}
-        <div className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto">
+        <div className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto pt-1">
           {categories.map((category) => {
             const categoryProducts = products.filter(p => p.category === category);
             const canDeleteCategory = categories.length > 1 && categoryProducts.length === 0;
