@@ -45,30 +45,32 @@ const Navbar: React.FC<NavbarProps> = () => {
 
   return (
     <>
-      <nav className="mx-auto mt-6 w-full max-w-5xl rounded-full bg-white/90 p-2 shadow">
+      <nav className="mx-auto mt-6 lg:mx-[20%] mx-5 rounded-full bg-white/90 p-2 shadow">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Link to="/" className="no-underline">
-              <NavButton active={isActive("/")}>Home</NavButton>
+            <Link to="/dashboard-admin/home" className="no-underline">
+              <NavButton active={isActive("/dashboard-admin/home")}>
+                Home
+              </NavButton>
             </Link>
 
-           <Link to="/dashboard-admin/pedidos" className="no-underline">
-  <NavButton active={isActive("/dashboard-admin/pedidos")}>
-    Pedidos
-  </NavButton>
-</Link>
+            <Link to="/dashboard-admin/pedidos" className="no-underline">
+              <NavButton active={isActive("/dashboard-admin/pedidos")}>
+                Pedidos
+              </NavButton>
+            </Link>
 
-<Link to="/dashboard-admin/fidelidade" className="no-underline">
-  <NavButton active={isActive("/dashboard-admin/fidelidade")}>
-    Fidelidade
-  </NavButton>
-</Link>
+            <Link to="/dashboard-admin/fidelidade" className="no-underline">
+              <NavButton active={isActive("/dashboard-admin/fidelidade")}>
+                Fidelidade
+              </NavButton>
+            </Link>
 
-<Link to="/dashboard-admin/cardapio" className="no-underline">
-  <NavButton active={isActive("/dashboard-admin/cardapio")}>
-    Cardápio
-  </NavButton>
-</Link>
+            <Link to="/dashboard-admin/cardapio" className="no-underline">
+              <NavButton active={isActive("/dashboard-admin/cardapio")}>
+                Cardápio
+              </NavButton>
+            </Link>
           </div>
 
           {/* Botão do carrinho */}
