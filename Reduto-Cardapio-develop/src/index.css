@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Scrollbar customizado (funciona no Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 10px; /* largura da barra */
+  height: 10px; /* altura no scroll horizontal */
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(240, 238, 233) ; /* cor de fundo do trilho */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0f4c50; /* cor da barrinha */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #033f32; /* cor ao passar o mouse */
+}
+
+/* Firefox */
+* {
+  scrollbar-width: auto;
+  scrollbar-color: #0f4c50 rgb(240, 238, 233); /* thumb | track */
+}
+
+body {
+  @apply bg-[#f0eee9];
+
+}
+
+@font-face {
+  font-family: 'Retrokia';
+  src: url('./assets/fonts/Retrokia.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
