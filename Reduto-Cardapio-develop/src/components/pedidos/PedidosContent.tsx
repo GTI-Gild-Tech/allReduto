@@ -6,12 +6,18 @@ import StatusSelect from "./StatusSelect";
 import type { PtStatus } from "../../services/status";
 import { PedidosTitle } from "./PedidosTitle";
 
-// -----------------------------
-// Tipos locais (iguais ao original, com createdAt opcional)
-// -----------------------------
+/* =========================
+   Tipos (ampliados p/ modal)
+   ========================= */
 type OrderItemUI = {
   name?: string;
   quantity?: number;
+  /** preço unitário em CENTAVOS (opcional) */
+  unitPriceCents?: number;
+  /** tamanho/observação opcional (ex.: Tam: M) */
+  sizeLabel?: string;
+  /** categoria opcional (ex.: Cat: Cappuccinos) */
+  categoryLabel?: string;
 };
 
 type OrderUI = {
@@ -25,17 +31,13 @@ type OrderUI = {
   /** Rótulo opcional já formatado vindo do back */
   total?: string;
   status: PtStatus;
-  /** Pode vir como timestamp (number) ou ISO string (ex.: created_at) */
   createdAt?: number | string;
   updatedAt?: number | string;
-  // também deixamos espaço para created_at/updated_at vindos crus
   created_at?: string;
   updated_at?: string;
 };
 
-// -----------------------------
-// Helpers
-// -----------------------------
+/* ============ Helpers ============ */
 const formatBRL = (v?: number | null) =>
   (Number.isFinite(v as number) ? (v as number) / 100 : 0).toLocaleString(
     "pt-BR",
@@ -53,12 +55,151 @@ function toYMDLocal(d: Date | string | number | undefined | null): string | null
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/* ============ UI Básica ============ */
+function ActionButton(
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "solid" | "outline" }
+) {
+  const { className = "", variant = "outline", ...rest } = props;
+  const base =
+    "rounded px-3 py-1 text-sm transition-colors h-[36px] whitespace-nowrap";
+  const styles =
+    variant === "outline"
+      ? "border hover:bg-gray-50"
+      : "bg-[#0f4c50] text-white hover:bg-[#0d4247]";
+  return <button className={`${base} ${styles} ${className}`} {...rest} />;
+}
+
+/* ============ MODAL ============ */
+type OrderDetailsModalProps = {
+  open: boolean;
+  onClose: () => void;
+  order?: OrderUI | null;
+};
+
+function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
+  React.useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    if (open) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open || !order) return null;
+
+  const titleNumber = order.orderNumber ?? order.id;
+  const totalLabel =
+    order.totalCents != null ? formatBRL(order.totalCents) : order.total ?? "";
+
+  // cálculo de subtotal por item (se houver preço unitário)
+  const getUnit = (it?: OrderItemUI) =>
+    it?.unitPriceCents != null ? formatBRL(it.unitPriceCents) : "—";
+  const getSub = (it?: OrderItemUI) => {
+    const q = it?.quantity ?? 0;
+    const u = it?.unitPriceCents ?? 0;
+    return q && u ? formatBRL(q * u) : "—";
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* overlay */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* card */}
+      <div className="relative mx-4 w-full max-w-4xl rounded-xl bg-white shadow-2xl">
+        {/* header */}
+        <div className="flex items-start justify-between p-6">
+          <div className="space-y-1 text-left">
+            <h2 className="text-2xl font-bold text-[#0f4c50]">
+              Pedido {titleNumber}
+            </h2>
+            <p className="text-sm text-gray-700">
+              Mesa: <strong>{order.table ?? "—"}</strong> • Cliente:{" "}
+              <strong>{order.name ?? "—"}</strong>
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            aria-label="Fechar"
+            title="Fechar"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* tabela */}
+        <div className="px-6 pb-4">
+          <div className="overflow-hidden rounded-lg border">
+            {/* head com fundo bege do anexo */}
+            <div className="grid grid-cols-[1fr_80px_120px_140px] bg-[#bf986c]/85 px-4 py-3 text-left text-sm font-semibold text-white/95">
+              <span>Item</span>
+              <span className="text-center">Qtd</span>
+              <span className="text-center">Unit.</span>
+              <span className="text-center">Subtotal</span>
+            </div>
+
+            <div className="divide-y">
+              {(order.items ?? []).map((it, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-[1fr_80px_120px_140px] items-center px-4 py-4 text-sm"
+                >
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-800">
+                      {it.name ?? "Item"}
+                    </div>
+                    {(it.sizeLabel || it.categoryLabel) && (
+                      <div className="mt-1 text-[13px] text-gray-600">
+                        {it.sizeLabel && <span className="mr-3">Tam: {it.sizeLabel}</span>}
+                        {it.categoryLabel && <span>Cat: {it.categoryLabel}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center text-gray-800">
+                    {it.quantity ?? 0}
+                  </div>
+                  <div className="text-center text-gray-800">{getUnit(it)}</div>
+                  <div className="text-center text-gray-800">{getSub(it)}</div>
+                </div>
+              ))}
+
+              {/* Total */}
+              <div className="flex items-center justify-end gap-6 px-4 py-5">
+                <div className="text-right text-[15px] text-gray-600">Total</div>
+                <div className="text-2xl font-extrabold text-[#0f4c50]">
+                  {totalLabel || "—"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* footer de ações (opcional) */}
+        <div className="flex items-center justify-end gap-2 p-4 pt-0">
+          <ActionButton onClick={onClose} className="border-gray-300">
+            Fechar
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============ Página ============ */
 export default function PedidosContent() {
   const {
     orders: rawOrders,
     updateOrderStatus,
     deleteOrder,
-    updateOrderInfo,
     refresh,
   } = useOrders();
 
@@ -67,63 +208,64 @@ export default function PedidosContent() {
   const [savingId, setSavingId] = React.useState<string | number | null>(null);
   const isSaving = (id: string | number) => savingId === id;
 
-  // --- Filtro de data (um único dia) ---
+  // filtro de data
   const [selectedDate, setSelectedDate] = React.useState<string>(""); // YYYY-MM-DD
-
-  // Aplica filtro por igualdade de "YYYY-MM-DD" (local), evitando problemas de fuso
   const filteredOrders = React.useMemo(() => {
     if (!selectedDate) return orders;
-
     return orders.filter((o) => {
       const orderYMD =
         toYMDLocal(o.createdAt) ??
         toYMDLocal(o.created_at) ??
         toYMDLocal(o.updatedAt) ??
         toYMDLocal(o.updated_at);
-
-      // Se o pedido não tem data conhecida, decida manter (true) ou ocultar (false).
-      if (!orderYMD) return true; // manter sem data mesmo com filtro
+      if (!orderYMD) return true;
       return orderYMD === selectedDate;
     });
   }, [orders, selectedDate]);
 
+  // modal
+  const [openModal, setOpenModal] = React.useState(false);
+  const [selectedOrder, setSelectedOrder] = React.useState<OrderUI | null>(null);
+  const handleViewOrder = (order: OrderUI) => {
+    setSelectedOrder(order);
+    setOpenModal(true);
+  };
+
   return (
     <div className="space-y-4 flex-col items-center justify-center text-center self-center lg:mx-[20%] mx-5">
       {/* HEADER: título central e filtro à direita */}
-      <div className="relative">
-        <PedidosTitle />
-        <div className="absolute right-0 top-1/2 -translate-y-1/2">
-          <div className="flex items-center gap-2">
-            <div className="bg-[rgba(248,248,248,0.75)] h-[36.8px] relative rounded-[5px] w-[190px]">
-              <div
-                aria-hidden
-                className="absolute border border-[#b5b5b5] border-solid inset-0 pointer-events-none rounded-[5px]"
-              />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="absolute inset-0 px-2 py-2 bg-transparent text-[13px] font-['Open_Sans:Regular',_sans-serif] outline-none text-[#000000] cursor-pointer"
-                aria-label="Filtrar pedidos por data"
-                style={{ fontVariationSettings: "'wdth' 100" }}
-              />
-            </div>
-            {selectedDate && (
-              <button
-                onClick={() => setSelectedDate("")}
-                className="bg-[#797474] hover:bg-[#6a6a6a] transition-colors text-white px-3 py-2 text-[13px] rounded-[5px] h-[36.8px]"
-              >
-                Limpar
-              </button>
-            )}
-            <button
-              onClick={refresh}
-              className="bg-[#0f4c50] hover:bg-[#0d4247] transition-colors text-white px-3 py-2 text-[13px] rounded-[5px] h-[36.8px]"
-            >
-              Atualizar
-            </button>
-          </div>
+      <PedidosTitle />
+
+      <div className="flex flex-wrap gap-2 justify-center items-center">
+        <div className="bg-[rgba(248,248,248,0.75)] h-[36.8px] relative rounded-[5px] w-[190px]">
+          <div
+            aria-hidden
+            className="absolute border border-[#b5b5b5] border-solid inset-0 pointer-events-none rounded-[5px]"
+          />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="absolute inset-0 px-2 py-2 bg-transparent text-[13px] font-['Open_Sans:Regular',_sans-serif] outline-none text-[#000000] cursor-pointer"
+            aria-label="Filtrar pedidos por data"
+            style={{ fontVariationSettings: "'wdth' 100" }}
+          />
         </div>
+
+        {selectedDate && (
+          <button
+            onClick={() => setSelectedDate("")}
+            className="bg-[#797474] hover:bg-[#6a6a6a] transition-colors text-white px-3 py-2 text-[13px] rounded-[5px] h-[36.8px]"
+          >
+            Limpar
+          </button>
+        )}
+        <button
+          onClick={refresh}
+          className="bg-[#0f4c50] hover:bg-[#0d4247] transition-colors text-white px-3 py-2 text-[13px] rounded-[5px] h-[36.8px]"
+        >
+          Atualizar
+        </button>
       </div>
 
       {/* Lista de pedidos */}
@@ -145,7 +287,7 @@ export default function PedidosContent() {
             <div key={o.id} className="rounded border bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between">
                 {/* Bloco esquerdo: dados */}
-                <div className="">
+                <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold text-[#0f4c50]">
                       Pedido #{o.orderNumber ?? o.id}
@@ -163,16 +305,6 @@ export default function PedidosContent() {
                       <strong>{totalLabel}</strong>
                     </p>
                   </div>
-
-                  {!!o.items?.length && (
-                    <ul className="mt-1 list-disc pl-5 text-sm text-gray-700">
-                      {o.items.map((it, i) => (
-                        <li key={i}>
-                          {it.name ?? "Item"} — {it.quantity ?? 0}x
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
 
                 {/* Bloco direito: ações */}
@@ -194,6 +326,10 @@ export default function PedidosContent() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
+                    <ActionButton onClick={() => handleViewOrder(o)}>
+                      Ver pedido
+                    </ActionButton>
+
                     <button
                       className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
                       disabled={isSaving(o.id)}
@@ -214,11 +350,7 @@ export default function PedidosContent() {
                       className="rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
                       disabled={isSaving(o.id)}
                       onClick={async () => {
-                        if (
-                          !window.confirm(
-                            `Excluir pedido #${o.orderNumber ?? o.id}?`
-                          )
-                        )
+                        if (!window.confirm(`Excluir pedido #${o.orderNumber ?? o.id}?`))
                           return;
                         try {
                           setSavingId(o.id);
@@ -237,6 +369,13 @@ export default function PedidosContent() {
           );
         })
       )}
+
+      {/* Modal */}
+      <OrderDetailsModal
+        open={openModal}
+        order={selectedOrder}
+        onClose={() => setOpenModal(false)}
+      />
     </div>
   );
 }
