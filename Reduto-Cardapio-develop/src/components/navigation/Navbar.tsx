@@ -44,10 +44,10 @@ const Navbar: React.FC<NavbarProps> = () => {
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   return (
-    <>
-      <nav className="mx-auto mt-6 lg:mx-[20%] mx-5 rounded-full bg-white/90 p-2 shadow">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+    <div className="flex justify-center">
+      <nav className="flex lg:mx-[20%] mx-5 w-[70vh] items-center mt-6">
+        <div className="mx-auto  rounded-full bg-white/90 p-2 shadow ">
+          <div className="flex items-center gap-2 ">
             <Link to="/dashboard-admin/home" className="no-underline">
               <NavButton active={isActive("/dashboard-admin/home")}>
                 Home
@@ -72,27 +72,28 @@ const Navbar: React.FC<NavbarProps> = () => {
               </NavButton>
             </Link>
           </div>
-
+        </div>
+        
           {/* Botão do carrinho */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="relative inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[#0f4c50] shadow hover:bg-gray-50"
+            className="items-center gap-2 rounded-full lg:inline-flex hidden bg-white/90 px-3 py-2 text-[#0f4c50] shadow hover:bg-gray-50"
             aria-label="Abrir carrinho"
           >
             <ShoppingCart className="h-5 w-5" />
             <span className="text-sm font-medium">{subtotalLabel}</span>
             {itemsCount > 0 && (
-              <span className="absolute -right-2 -top-2 rounded-full bg-[#0f4c50] px-2 py-0.5 text-xs font-bold text-white">
+              <span className="rounded-full bg-[#0f4c50] px-2 py-0.5 text-xs font-bold text-white">
                 {itemsCount}
               </span>
             )}
           </button>
-        </div>
-      </nav>
+        </nav>
+      
 
       {/* Sidebar do carrinho */}
       <CartSidebar isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
-    </>
+    </div>
   );
 };
 
