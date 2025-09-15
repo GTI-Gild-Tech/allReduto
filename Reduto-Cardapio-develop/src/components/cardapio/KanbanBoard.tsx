@@ -34,7 +34,8 @@ interface EditProductModalProps {
   product: Product | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (product: Product) => void;
+  // ⬇️ passa também o arquivo (opcional) para o pai
+  onSave: (product: Product, imageFile?: File) => void;
 }
 
 const handleExport = () => {
@@ -164,7 +165,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       sizePrices: product.sizes.reduce((acc, size) => ({ ...acc, [size.size]: size.price }), {} as Record<string, string>),
       customOptions: [],
       uniquePrice: '',
-      imageUrl: product.imageUrl ?? '',   // << seguro
+      imageUrl: product.imageUrl ?? '',
     });
   } else {
     setFormData({
@@ -176,11 +177,13 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       sizePrices: { P: '', M: '', G: '' },
       customOptions: [],
       uniquePrice: '',
-      imageUrl: '',                       // << seguro
+      imageUrl: '',
     });
   }
 }, [product, isOpen, categories]);
 
+  // --- NOVO: guardamos o arquivo (pra mandar ao backend) ---
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const handleSave = () => {
   if (!formData.name || !formData.category) return;
@@ -199,19 +202,18 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   }
   if (sizes.length === 0) return;
 
-  const base = product ? { ...product } : {}; // << evita spread de null/undefined
+  const base = product ? { ...product } : {};
 
   onSave({
     ...base,
     ...formData,
     id: product?.id || Date.now().toString(),
     sizes,
-    imageUrl: formData.imageUrl || product?.imageUrl || '', // << seguro
-  } as Product);
+    imageUrl: formData.imageUrl || product?.imageUrl || '',
+  } as Product, imageFile || undefined);
 
   onClose();
 };
-
 
   const toggleSize = (size: string) => {
     setFormData(prev => ({
@@ -264,53 +266,68 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
   async function getCroppedImg(imageSrc: string, pixelCrop: {x:number;y:number;width:number;height:number}) {
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = imageSrc;
-  });
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = imageSrc;
+    });
 
-  const canvas = document.createElement("canvas");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas não suportado");
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas não suportado");
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    pixelCrop.width,
-    pixelCrop.height
-  );
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
 
-  // gera dataURL em PNG (padrão). se quiser, troque para "image/jpeg" com qualidade
-  return canvas.toDataURL("image/png");
-}
+    // gera dataURL PNG
+    return canvas.toDataURL("image/png");
+  }
+
+  // helper: converte dataURL -> File
+  function dataURLtoFile(dataUrl: string, filename = 'image.png'): File {
+    const arr = dataUrl.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const bstr = atob(arr[1] || '');
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new File([u8arr], filename, { type: mime });
+  }
 
   if (!isOpen) return null;
 
   const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // validação simples (opcional)
     const okTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!okTypes.includes(file.type)) {
       alert("É aceito apenas os formatos JPG, PNG e WEBP.");
       e.target.value = "";
       return;
     }
+    // guarda o arquivo original (caso o usuário decida cortar depois)
+    setImageFile(file);
+
     const reader = new FileReader();
-      reader.onload = () => {
-        setRawImage(String(reader.result));
-        setIsCropping(true);
-      };
+    reader.onload = () => {
+      setRawImage(String(reader.result));
+      setIsCropping(true);
+    };
     reader.readAsDataURL(file);
   };
 
@@ -387,7 +404,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                 <p className="leading-[normal] whitespace-pre">Adicione imagem do produto</p>
               </div>
   
-              {/* +++ INPUT oculto + handler */}
+              {/* INPUT oculto + handler */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -396,7 +413,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                 onChange={onImageChange}
               />
 
-              {/* +++ Área clicável com preview */}
+              {/* Área clicável com preview */}
               <div
                 onClick={onPickImage}
                 className="h-[160px] relative rounded-[5px] w-full border-2 border-dashed border-[#b5b5b5] flex items-center justify-center bg-[#fafafa] hover:bg-[#f0f0f0] transition-colors cursor-pointer overflow-hidden"
@@ -417,11 +434,11 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                 )}
               </div>
 
-              {/* +++ Botão remover (opcional) */}
+              {/* Botão remover (opcional) */}
               {formData.imageUrl && (
                 <div className="mt-2 flex justify-end">
                   <button
-                    onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}
+                    onClick={() => { setFormData(prev => ({ ...prev, imageUrl: '' })); setImageFile(null); }}
                     className="text-sm px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded-md"
                   >
                     Remover imagem
@@ -674,7 +691,13 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                     onClick={async () => {
                       if (!rawImage || !croppedAreaPixels) return;
                       const croppedDataUrl = await getCroppedImg(rawImage, croppedAreaPixels);
+                      // preview pro usuário
                       setFormData(prev => ({ ...prev, imageUrl: croppedDataUrl }));
+                      // arquivo real (PNG) pra subir no backend
+                      const safeName = (imageFile?.name || 'crop.png').replace(/\.[^.]+$/, '.png');
+                      const fileFromCrop = dataURLtoFile(croppedDataUrl, safeName);
+                      setImageFile(fileFromCrop);
+
                       setIsCropping(false);
                       setRawImage(null);
                       setZoom(1);
@@ -729,13 +752,12 @@ export function KanbanBoard() {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveProduct = (updatedProduct: Product) => {
-    // If it's a new product (no existing ID), add it to the list
+  // ⬇️ agora recebe o arquivo opcional vindo do modal
+  const handleSaveProduct = (updatedProduct: Product, imageFile?: File) => {
     if (!products.find(p => p.id === updatedProduct.id)) {
-      addProduct(updatedProduct);
+      addProduct(updatedProduct, imageFile);   // cria com foto (FormData se vier file)
     } else {
-      // Otherwise, update the existing product
-      updateProduct(updatedProduct);
+      updateProduct(updatedProduct, imageFile); // atualiza com foto (FormData se vier file)
     }
   };
 

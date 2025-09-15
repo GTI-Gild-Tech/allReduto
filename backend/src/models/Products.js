@@ -17,8 +17,13 @@ module.exports = (sequelize) => {
     stock_qty: DataTypes.INTEGER,
     active: DataTypes.BOOLEAN,
     created_at: DataTypes.DATE,
-    updated_at: DataTypes.DATE
-  }, {
+    updated_at: DataTypes.DATE,
+    imageUrl: {
+    type: DataTypes.STRING,
+    allowNull: true
+    },
+  },
+   {
     sequelize,
     modelName: 'Product',
     tableName: 'products', // Garante que o Sequelize use o nome correto da tabela

@@ -1,20 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const upload = require('../config/multer');
 const productController = require('../controllers/productController');
 
-// GET /api/products
-router.get('/', productController.getAllProducts);
+// logger simples pra depurar conteúdo da requisição
+const reqLogger = (req, _res, next) => {
+  console.log('[routes] CT:', req.headers['content-type']);
+  next();
+};
 
-// GET /api/products/:id
+router.get('/', productController.getAllProducts);
 router.get('/:id', productController.getProductById);
 
-// POST /api/products
-router.post('/', productController.createProduct);
+// use o NOME DO CAMPO "file"
+router.post('/', reqLogger, upload.single('file'), productController.createProduct);
+router.put('/:id', reqLogger, upload.single('file'), productController.updateProduct);
 
-// PUT /api/products/:id
-router.put('/:id', productController.updateProduct);
-
-// DELETE /api/products/:id
 router.delete('/:id', productController.deleteProduct);
 
 module.exports = router;
