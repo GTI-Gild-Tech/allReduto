@@ -14,9 +14,11 @@ type OrderItemUI = {
   quantity?: number;
   /** preço unitário em CENTAVOS (opcional) */
   unitPriceCents?: number;
-  /** tamanho/observação opcional (ex.: Tam: M) */
+  /** campos reais vindos do contexto/back */
+  size?: string;
+  category?: string;
+  /** rótulos antigos/compatibilidade */
   sizeLabel?: string;
-  /** categoria opcional (ex.: Cat: Cappuccinos) */
   categoryLabel?: string;
 };
 
@@ -148,29 +150,34 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
             </div>
 
             <div className="divide-y">
-              {(order.items ?? []).map((it, idx) => (
-                <div
-                  key={idx}
-                  className="grid grid-cols-[1fr_80px_120px_140px] items-center px-4 py-4 text-sm"
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium text-gray-800">
-                      {it.name ?? "Item"}
-                    </div>
-                    {(it.sizeLabel || it.categoryLabel) && (
-                      <div className="mt-1 text-[13px] text-gray-600">
-                        {it.sizeLabel && <span className="mr-3">Tam: {it.sizeLabel}</span>}
-                        {it.categoryLabel && <span>Cat: {it.categoryLabel}</span>}
+              {(order.items ?? []).map((it, idx) => {
+                const size = it.size ?? it.sizeLabel ?? "";
+                const category = it.category ?? it.categoryLabel ?? "";
+
+                return (
+                  <div
+                    key={idx}
+                    className="grid grid-cols-[1fr_80px_120px_140px] items-center px-4 py-4 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-800">
+                        {(it.name ?? "Item")}{size ? ` (${size})` : ""}
                       </div>
-                    )}
+                      {(size || category) && (
+                        <div className="mt-1 text-[13px] text-gray-600">
+                          {size && <span className="mr-3">Tam: {size}</span>}
+                          {category && <span>Cat: {category}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-center text-gray-800">
+                      {it.quantity ?? 0}
+                    </div>
+                    <div className="text-center text-gray-800">{getUnit(it)}</div>
+                    <div className="text-center text-gray-800">{getSub(it)}</div>
                   </div>
-                  <div className="text-center text-gray-800">
-                    {it.quantity ?? 0}
-                  </div>
-                  <div className="text-center text-gray-800">{getUnit(it)}</div>
-                  <div className="text-center text-gray-800">{getSub(it)}</div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Total */}
               <div className="flex items-center justify-end gap-6 px-4 py-5">

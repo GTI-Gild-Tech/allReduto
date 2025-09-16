@@ -2,13 +2,14 @@ const { OrderItem, Order, Product } = require('../models');
 
 /**
  * GET /api/order_items
- * Suporta filtros opcionais: ?order_id=..., ?product_id=...
+ * Suporta filtros opcionais: ?order_id=..., ?product_id=..., ?size=...
  */
 async function getAllOrderItems(req, res) {
   try {
     const where = {};
     if (req.query.order_id) where.order_id = Number(req.query.order_id);
     if (req.query.product_id) where.product_id = Number(req.query.product_id);
+    if (req.query.size) where.size = String(req.query.size);
 
     const items = await OrderItem.findAll({
       where,
@@ -57,19 +58,19 @@ async function getOrderItemById(req, res) {
 
 /**
  * POST /api/order_items
- * Body: { order_id, product_id, qty, unit_price_cents }
+ * Body: { order_id, product_id, quantity, unit_price_cents, size? }
  * OBS: NÃO envie total_cents — coluna gerada no DB.
  */
 async function createOrderItem(req, res) {
   try {
-    const { order_id, product_id, quantity, unit_price_cents } = req.body;
+    const { order_id, product_id, quantity, unit_price_cents, size } = req.body;
 
     // validações simples
     if (!order_id || !product_id) {
       return res.status(400).json({ message: 'order_id e product_id são obrigatórios.' });
     }
     if (quantity == null || Number(quantity) <= 0) {
-      return res.status(400).json({ message: 'qty deve ser > 0.' });
+      return res.status(400).json({ message: 'quantity deve ser > 0.' });
     }
     if (unit_price_cents == null || Number(unit_price_cents) < 0) {
       return res.status(400).json({ message: 'unit_price_cents deve ser >= 0.' });
@@ -84,11 +85,12 @@ async function createOrderItem(req, res) {
     if (!product) return res.status(404).json({ message: 'product_id inexistente.' });
 
     const created = await OrderItem.create({
-  order_id,
-  product_id,
-  quantity,
-  unit_price_cents
-});;
+      order_id: Number(order_id),
+      product_id: Number(product_id),
+      quantity: Number(quantity),
+      unit_price_cents: Number(unit_price_cents),
+      size: size == null || size === '' ? null : String(size),
+    });
 
     return res.status(201).json(created);
   } catch (error) {
@@ -103,20 +105,20 @@ async function createOrderItem(req, res) {
 
 /**
  * PUT /api/order_items/:id
- * Body permitido: { qty?, unit_price_cents?, product_id? }
+ * Body permitido: { quantity?, unit_price_cents?, product_id?, size? }
  * (Não atualize order_id aqui — se precisar, crie outro item.)
  */
 async function updateOrderItem(req, res) {
   try {
     const id = Number(req.params.id);
-    const { quantity, unit_price_cents, product_id } = req.body;
+    const { quantity, unit_price_cents, product_id, size } = req.body;
 
     const item = await OrderItem.findByPk(id);
     if (!item) return res.status(404).json({ message: 'Item de pedido não encontrado.' });
 
     const patch = {};
     if (quantity != null) {
-      if (Number(quantity) <= 0) return res.status(400).json({ message: 'qty deve ser > 0.' });
+      if (Number(quantity) <= 0) return res.status(400).json({ message: 'quantity deve ser > 0.' });
       patch.quantity = Number(quantity);
     }
     if (unit_price_cents != null) {
@@ -129,9 +131,13 @@ async function updateOrderItem(req, res) {
       if (!prod) return res.status(404).json({ message: 'product_id inexistente.' });
       patch.product_id = Number(product_id);
     }
+    if (size !== undefined) {
+      // permite limpar (string vazia -> null)
+      patch.size = size === '' ? null : String(size);
+    }
 
     await item.update(patch);
-    // total_cents será recalculado automaticamente se for coluna gerada
+    // total_cents é virtual/gerado no DB; não precisa atualizar manualmente
     const fresh = await OrderItem.findByPk(id, {
       include: [
         { model: Order, as: 'order' },

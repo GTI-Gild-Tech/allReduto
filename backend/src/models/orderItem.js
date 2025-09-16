@@ -22,6 +22,10 @@ module.exports = (sequelize) => {
       autoIncrement: true,
       allowNull: false,
     },
+      size: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      },
     order_id: {
       type: DataTypes.BIGINT.UNSIGNED,
       allowNull: false,
