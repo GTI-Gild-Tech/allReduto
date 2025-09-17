@@ -122,7 +122,7 @@ export function HomeContent() {
       : products.filter((p) => p.category === selectedCategory);
 
   return (
-    <div className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
+    <div id="exportCardapio" className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
       {/* Título principal */}
       <div className="font-['Retrokia:Demo',_sans-serif] leading-[0] not-italic relative shrink-0 text-[#0f4c50] md:text-5xl text-3xl text-center tracking-[-1.28px]">
         <p className="leading-[1.3] whitespace-pre font-[Retrokia] ">
@@ -172,7 +172,7 @@ export function HomeContent() {
       </div>
 
       {/* Conteúdo do cardápio */}
-      <div className="content-stretch flex flex-col gap-12 items-start justify-start relative shrink-0 w-full max-w-[1400px]">
+      <div className="content-stretch flex flex-col gap-12 w-full max-w-[1129px] mx-auto px-4">
         {selectedCategory === "todos" ? (
           // Mostrar todas as categorias
           categories.map((category) => (
