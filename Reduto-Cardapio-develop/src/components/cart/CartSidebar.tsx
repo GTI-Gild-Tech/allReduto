@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrdersContext";
+import { OrderSuccess } from "../public_site/OrderSuccess";
 
 type Props = {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
   const [customerName, setCustomerName] = useState("");
   const [tableNumber, setTableNumber] = useState<string>("");
   const [saving, setSaving] = useState(false);
+  const [showOrderSuccess, setShowOrderSuccess] = useState(false);
 
   const subtotalCents = useMemo(
     () =>
@@ -43,6 +45,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
   );
 
   const canFinish = cartItems.length > 0 && !!customerName.trim();
+  const canContinue = cartItems.length > 0;
 
   const goToDetails = () => {
     if (cartItems.length === 0) return;
@@ -66,7 +69,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
       });
 
       clearCart();
-      onClose();
+      setShowOrderSuccess(true);
       setStep("cart");
       setCustomerName("");
       setTableNumber("");
@@ -78,6 +81,23 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
     }
   };
 
+
+  // Exibe o modal de sucesso do pedido
+  if (showOrderSuccess) {
+    return (
+      <OrderSuccess
+        isOpen={showOrderSuccess}
+        onClose={() => {
+          setShowOrderSuccess(false);
+          onClose();
+        }}
+        customerName={customerName}
+        tableNumber={tableNumber}
+        total={subtotalCents / 100}
+      />
+    );
+  }
+
   if (!isOpen) return null;
 
   return (
@@ -87,47 +107,46 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
 
       {/* drawer */}
       <aside className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl flex flex-col">
-        <header className="flex items-center justify-between p-4 border-b">
+        <header className="flex items-center justify-between p-4 border-b border-stone-300">
           <h2 className="text-lg font-semibold text-[#0f4c50]">
             {step === "cart" ? "Seu Carrinho" : "Dados do Cliente"}
           </h2>
           <button onClick={onClose} aria-label="Fechar">
-            <X className="h-6 w-6 text-gray-600" />
+            <X className="h-6 w-6 text-[#0f4c50]  hover:text-[#0f4c50]/80" />
           </button>
         </header>
 
         <div className="flex-1 overflow-auto p-4">
           {step === "cart" ? (
-            <>
-              {cartItems.length === 0 ? (
-                <p className="text-gray-600">Seu carrinho está vazio.</p>
-              ) : (
-                <ul className="space-y-3">
-                  {cartItems.map((it, idx) => (
-                    <li key={idx} className="flex justify-between rounded border p-3">
-                      <div>
-                        <div className="font-medium text-[#0f4c50]">
-                          {it.name} {it.size ? `(${it.size})` : ""}
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          Qtd: {it.quantity} • Unit: {formatBRL(it.unitPriceCents)}
-                        </div>
+            cartItems.length === 0 ? (
+              <>
+                
+              </>
+            ) : (
+              <ul className="space-y-3">
+                {cartItems.map((it, idx) => (
+                  <li key={idx} className="flex justify-between rounded border border-[#c1a07b] p-3">
+                    <div>
+                      <div className="font-medium text-[#0f4c50]">
+                        {it.name} {it.size ? `(${it.size})` : ""}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <strong>{formatBRL((it.unitPriceCents || 0) * (it.quantity || 0))}</strong>
-                        <button
-                          className="text-sm text-red-600 hover:underline"
-                          onClick={() => removeFromCart(it.key)}
-
-                        >
-                          Remover
-                        </button>
+                      <div className="text-sm text-gray-600">
+                        Qtd: {it.quantity} • Unit: {formatBRL(it.unitPriceCents)}
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <strong>{formatBRL((it.unitPriceCents || 0) * (it.quantity || 0))}</strong>
+                      <button
+                        className="text-sm text-red-600 hover:underline"
+                        onClick={() => removeFromCart(it.key)}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )
           ) : (
             <div className="space-y-4">
               <div>
@@ -157,41 +176,43 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
           )}
         </div>
 
-        <footer className="border-t p-4">
+        <footer className="border-t p-4 border-stone-300">
           {step === "cart" ? (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Subtotal:{" "}
+            <div className="flex-col space-y-2">
+            
+                <p className=" py-3 text-xl text-center text-gray-700">Subtotal:{" "}
                 <strong className="text-[#0f4c50]">
                   {formatBRL(subtotalCents)}
-                </strong>
-              </div>
-              <div className="flex gap-2">
+                </strong></p>
+
                 <button
-                  className="rounded bg-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-300"
+                  className="rounded w-full  px-4 py-2 text-gray-800 bg-stone-200 hover:bg-stone-300"
                   onClick={onClose}
                 >
-                  Fechar
+                  Fechar carrinho
                 </button>
+                
                 <button
-                  className="rounded bg-[#0f4c50] px-4 py-2 font-medium text-white hover:bg-[#0d4247]"
+                  className={
+                    `rounded w-full bg-[#0f4c50] px-4 py-2 font-medium text-white hover:bg-[#0d4247] ` +
+                    (!canContinue ? 'opacity-50 cursor-not-allowed' : '')
+                  }
                   onClick={goToDetails}
-                  disabled={cartItems.length === 0}
+                  disabled={!canContinue}
                 >
-                  Continuar
+                  Continuar pedindo
                 </button>
-              </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
+            <div className="flex-col space-y-2">
               <button
-                className="rounded bg-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-300"
+                className="rounded w-full  px-4 py-2 text-gray-800  bg-stone-200 hover:bg-stone-300 "
                 onClick={() => setStep("cart")}
               >
                 Voltar
               </button>
               <button
-                className="rounded bg-[#0f4c50] px-4 py-2 font-medium text-white hover:bg-[#0d4247] disabled:opacity-50"
+                className="rounded w-full bg-[#0f4c50] px-4 py-2 font-medium text-white hover:bg-[#0d4247] disabled:opacity-50"
                 onClick={handleFinish}
                 disabled={!canFinish || saving}
               >

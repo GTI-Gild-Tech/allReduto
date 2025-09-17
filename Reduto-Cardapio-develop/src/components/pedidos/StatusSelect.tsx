@@ -7,7 +7,6 @@ const OPTIONS: { value: PtStatus; label: string }[] = [
   { value: "preparando",  label: "Preparando" },
   { value: "pronto",      label: "Pronto" },
   { value: "enviado",     label: "Enviado" },
-  { value: "cancelado",   label: "Cancelado" },
 ];
 
 type Props = {
