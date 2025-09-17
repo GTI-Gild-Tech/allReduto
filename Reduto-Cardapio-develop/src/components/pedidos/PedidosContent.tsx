@@ -5,6 +5,7 @@ import StatusPill from "./StatusPill";
 import StatusSelect from "./StatusSelect";
 import type { PtStatus } from "../../services/status";
 import { PedidosTitle } from "./PedidosTitle";
+import ConfirmDialog from "../shared/ConfirmDialog";
 
 /* =========================
    Tipos (ampliados p/ modal)
@@ -159,7 +160,7 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
                     key={idx}
                     className="grid grid-cols-[1fr_80px_120px_140px] items-center px-4 py-4 text-sm"
                   >
-                    <div className="min-w-0">
+                    <div className="text-start">
                       <div className="font-medium text-gray-800">
                         {(it.name ?? "Item")}{size ? ` (${size})` : ""}
                       </div>
@@ -206,7 +207,6 @@ export default function PedidosContent() {
   const {
     orders: rawOrders,
     updateOrderStatus,
-    deleteOrder,
     refresh,
   } = useOrders();
 
@@ -214,6 +214,9 @@ export default function PedidosContent() {
 
   const [savingId, setSavingId] = React.useState<string | number | null>(null);
   const isSaving = (id: string | number) => savingId === id;
+
+  const [confirmId, setConfirmId] = React.useState<string | number | null>(null);
+
 
   // filtro de data
   const [selectedDate, setSelectedDate] = React.useState<string>(""); // YYYY-MM-DD
@@ -237,6 +240,16 @@ export default function PedidosContent() {
     setSelectedOrder(order);
     setOpenModal(true);
   };
+  async function handleConfirmCancel(id: string | number) {
+  try {
+    setSavingId(id);
+    await updateOrderStatus(id, "cancelado");
+  } finally {
+    setSavingId(null);
+    setConfirmId(null);
+  }
+}
+
 
   return (
     <div className="space-y-4 flex-col items-center justify-center text-center self-center lg:mx-[20%] mx-5">
@@ -346,28 +359,11 @@ export default function PedidosContent() {
                     </button>
 
                     <button
-                      className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
-                      disabled={isSaving(o.id)}
-                      onClick={() => updateOrderStatus(o.id, "cancelado")}
-                    >
-                      Cancelar
-                    </button>
-
-                    <button
                       className="rounded border border-red-300 px-3 py-1 text-sm text-red-600 hover:bg-red-50"
                       disabled={isSaving(o.id)}
-                      onClick={async () => {
-                        if (!window.confirm(`Excluir pedido #${o.orderNumber ?? o.id}?`))
-                          return;
-                        try {
-                          setSavingId(o.id);
-                          await deleteOrder(o.id);
-                        } finally {
-                          setSavingId(null);
-                        }
-                      }}
+                      onClick={() => setConfirmId(o.id)}
                     >
-                      Excluir
+                      Cancelar
                     </button>
                   </div>
                 </div>
@@ -382,6 +378,20 @@ export default function PedidosContent() {
         open={openModal}
         order={selectedOrder}
         onClose={() => setOpenModal(false)}
+      />
+      <ConfirmDialog
+        open={confirmId !== null}
+        title="Cancelar pedido"
+        message="Tem certeza que deseja cancelar este pedido?"
+        confirmText="Cancelar pedido"
+        cancelText="Voltar"
+        isBusy={confirmId !== null && savingId === confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => {
+          if (confirmId != null) {
+            void handleConfirmCancel(confirmId);
+          }
+        }}
       />
     </div>
   );

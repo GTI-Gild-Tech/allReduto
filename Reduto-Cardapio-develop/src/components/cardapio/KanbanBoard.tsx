@@ -39,7 +39,7 @@ interface EditProductModalProps {
 }
 
 const handleExport = () => {
-  const printContents = document.getElementById('cardapio')?.innerHTML;
+  const printContents = document.getElementById('exportCardapio')?.innerHTML;
   const printWindow = window.open('', '', 'height=800,width=1000');
   if (printWindow && printContents) {
     printWindow.document.write('<html><head><title>Cardápio</title></head><body>');
