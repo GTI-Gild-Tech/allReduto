@@ -2,6 +2,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useCart } from "../context/CartContext"; // confirme o caminho!
+import { Description } from "@radix-ui/react-dialog";
 
 /** O modal trabalha SEMPRE em centavos */
 type SizeOpt = { name: string; priceCents: number };
@@ -23,7 +24,9 @@ type ProductLike = {
     price?: number; // reais (fallback)
     preco?: number; // reais (fallback)
     valor?: number; // reais (fallback)
+    
   }>;
+  description?: string;
   // possíveis preços únicos no produto (reais ou cents)
   priceCents?: number;
   total_price_cents?: number;
@@ -101,6 +104,8 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
         Number(product.uniquePrice ?? product.price ?? 0) * 100
       );
 
+      const generalDescription = (typeof product.description === "string")
+
     return [{ name: "Único", priceCents: Number(singleCents || 0) }];
   }, [product]);
 
@@ -118,6 +123,7 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
       quantity: qty,
       unitPriceCents, // SEMPRE em centavos
       category: product.category,
+      description: product.description
     };
 
     console.log("[AddToCartModal] addToCart payload:", payload);
@@ -127,6 +133,8 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
+     
+      
       {/* backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       {/* card */}
@@ -136,6 +144,7 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
           <button type="button" onClick={onClose} aria-label="Fechar">
             <X className="h-6 w-6 text-gray-600" />
           </button>
+       
         </div>
 
         {/* tamanhos */}

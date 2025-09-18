@@ -81,6 +81,9 @@ function MenuProductCard({ product }: MenuProductCardProps) {
       />
     </div>
   );
+
+
+
 }
 
 interface MenuCategoryProps {
@@ -90,7 +93,7 @@ interface MenuCategoryProps {
 
 function MenuCategory({ title, products }: MenuCategoryProps) {
   return (
-    <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full">
+    <div id="homeForPrint" className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full">
       {/* Título da categoria */}
       <div className="font-[Retrokia] font-bold leading-[0] relative shrink-0 text-[#0f4c50] text-[32px]">
         <p className="leading-[1.2]">{title}</p>
@@ -109,7 +112,6 @@ function MenuCategory({ title, products }: MenuCategoryProps) {
 export function HomeContent() {
   const { products, categories } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
-
   // Agrupar produtos por categoria
   const groupedProducts = categories.reduce((acc, category) => {
     acc[category] = products.filter((p) => p.category === category);
@@ -122,7 +124,7 @@ export function HomeContent() {
       : products.filter((p) => p.category === selectedCategory);
 
   return (
-    <div className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
+    <div id="homeForprint" className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
       {/* Título principal */}
       <div className="font-['Retrokia:Demo',_sans-serif] leading-[0] not-italic relative shrink-0 text-[#0f4c50] md:text-5xl text-3xl text-center tracking-[-1.28px]">
         <p className="leading-[1.3] whitespace-pre font-[Retrokia] ">
