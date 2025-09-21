@@ -38,20 +38,11 @@ interface EditProductModalProps {
   onSave: (product: Product, imageFile?: File) => void;
 }
 
-const handleExport = () => {
-  const printContents = document.getElementById('exportCardapio')?.innerHTML;
-  const printWindow = window.open('', '', 'height=800,width=1000');
-  if (printWindow && printContents) {
-    printWindow.document.write('<html><head><title>Cardápio</title></head><body>');
-    printWindow.document.write(printContents);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
-  } else {
-    window.print(); // fallback
-  }
+// em CardapioContent.tsx (ou onde fica o botão)
+export const handleExport = () => {
+  const url = new URL('/dashboard-admin/home', window.location.origin);
+  url.searchParams.set('print', '1'); // flag para ativar o auto-print
+  window.open(url.toString(), '_blank', 'width=1000,height=800');
 };
 
 function BadgeOption({ 
