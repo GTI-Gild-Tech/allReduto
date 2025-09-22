@@ -1,17 +1,13 @@
-// src/components/cart/AddToCartModal.tsx
 import React, { useMemo, useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useCart } from "../context/CartContext"; // confirme o caminho!
-import { Description } from "@radix-ui/react-dialog";
 
-/** O modal trabalha SEMPRE em centavos */
 type SizeOpt = { name: string; priceCents: number };
 
 type ProductLike = {
   id: number | string;
   name: string;
   category?: string;
-  // o produto pode vir com vários formatos; normalizamos abaixo
   sizes?: Array<{
     name?: string;
     size?: string;
@@ -21,17 +17,15 @@ type ProductLike = {
     price_cents?: number;
     unit_price_cents?: number;
     valor_cents?: number;
-    price?: number; // reais (fallback)
-    preco?: number; // reais (fallback)
-    valor?: number; // reais (fallback)
-    
+    price?: number;
+    preco?: number;
+    valor?: number;
   }>;
-  description?: string;
-  // possíveis preços únicos no produto (reais ou cents)
+  description?: string; // usado apenas para exibir
   priceCents?: number;
   total_price_cents?: number;
-  uniquePrice?: number; // reais
-  price?: number;       // reais
+  uniquePrice?: number;
+  price?: number;
 };
 
 type Props = {
@@ -47,7 +41,7 @@ const formatBRL = (cents: number) =>
   });
 
 export default function AddToCartModal({ isOpen, product, onClose }: Props) {
-  const { addToCart } = useCart(); // precisa estar dentro do <CartProvider>
+  const { addToCart } = useCart();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [qty, setQty] = useState(1);
 
@@ -58,23 +52,14 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
     }
   }, [isOpen]);
 
-  /** Normaliza as opções de tamanho para { name, priceCents } */
+  // normaliza tamanhos
   const options: SizeOpt[] = useMemo(() => {
     if (!product) return [];
-
     const raw = Array.isArray(product.sizes) ? product.sizes : [];
 
     if (raw.length > 0) {
       return raw.map((s) => {
-        // nome
-        const name =
-          s?.name ??
-          s?.size ??
-          s?.label ??
-          s?.nome ??
-          "Único";
-
-        // preço em centavos (tenta vários campos)
+        const name = s?.name ?? s?.size ?? s?.label ?? s?.nome ?? "Único";
         const centsFromCentsFields =
           (typeof s?.priceCents === "number" ? s.priceCents : undefined) ??
           (typeof s?.price_cents === "number" ? s.price_cents : undefined) ??
@@ -83,11 +68,7 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
 
         const cents =
           centsFromCentsFields ??
-          Math.round(
-            Number(
-              s?.price ?? s?.preco ?? s?.valor ?? 0
-            ) * 100
-          );
+          Math.round(Number(s?.price ?? s?.preco ?? s?.valor ?? 0) * 100);
 
         return {
           name: String(name),
@@ -96,15 +77,10 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
       });
     }
 
-    // fallback: produto sem tamanhos → cria "Único"
     const singleCents =
       (typeof product.priceCents === "number" ? product.priceCents : undefined) ??
       (typeof product.total_price_cents === "number" ? product.total_price_cents : undefined) ??
-      Math.round(
-        Number(product.uniquePrice ?? product.price ?? 0) * 100
-      );
-
-      const generalDescription = (typeof product.description === "string")
+      Math.round(Number(product.uniquePrice ?? product.price ?? 0) * 100);
 
     return [{ name: "Único", priceCents: Number(singleCents || 0) }];
   }, [product]);
@@ -121,9 +97,9 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
       name: product.name,
       size: selected?.name,
       quantity: qty,
-      unitPriceCents, // SEMPRE em centavos
+      unitPriceCents, // em centavos
       category: product.category,
-      description: product.description
+      description: product.description ?? "", // SOMENTE leitura
     };
 
     console.log("[AddToCartModal] addToCart payload:", payload);
@@ -133,8 +109,6 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-     
-      
       {/* backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       {/* card */}
@@ -144,7 +118,6 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
           <button type="button" onClick={onClose} aria-label="Fechar">
             <X className="h-6 w-6 text-gray-600" />
           </button>
-       
         </div>
 
         {/* tamanhos */}
@@ -195,6 +168,16 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
           </div>
         </div>
 
+        {/* DESCRIÇÃO — somente leitura */}
+        {product.description?.trim() ? (
+          <div className="mt-4">
+            <p className="text-sm font-medium">Descrição:</p>
+            <div className="mt-1 rounded border bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {product.description}
+            </div>
+          </div>
+        ) : null}
+
         {/* ações */}
         <div className="mt-5 flex gap-3">
           <button
@@ -205,7 +188,7 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
             Cancelar
           </button>
 
-          <button
+        <button
             type="button"
             onClick={handleAdd}
             className="flex-1 rounded-lg bg-[#0f4c50] px-4 py-2 font-medium text-white hover:bg-[#0d4247]"

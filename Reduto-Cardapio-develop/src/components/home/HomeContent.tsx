@@ -5,6 +5,7 @@ import { useProducts } from "../context/ProductsContext";
 
 // ⚠️ IMPORT CORRETO: default export do modal
 import AddToCartModal from "../cart/AddToCartModal";
+import { Printer } from "lucide-react"; // ícone do botão de imprimir
 
 // --- Helpers de formatação ---
 const formatBRL = (v: number) =>
@@ -26,9 +27,10 @@ function MenuProductCard({ product }: MenuProductCardProps) {
       return "Sem preço";
     }
     return product.sizes
-      .map((s) => {
-        const priceNum = Number(s.price);
-        return `${s.size} - ${formatBRL(priceNum)}`;
+      .map((s: any) => {
+        const label = s.size ?? s.name ?? s.label ?? "Único";
+        const priceNum = Number(s.price ?? s.price_cents / 100 ?? 0);
+        return `${label} - ${formatBRL(priceNum)}`;
       })
       .join(" | ");
   };
@@ -65,10 +67,17 @@ function MenuProductCard({ product }: MenuProductCardProps) {
       {/* Preços */}
       <p className="text-[#2f1b04] text-[14px]">{formatPrices()}</p>
 
-      {/* Botão */}
+      {/* Descrição — aparece só na impressão */}
+      {product.description?.trim() ? (
+        <p className="show-on-print text-[12px] text-gray-700 mt-1" style={{ display: "none" }}>
+          {product.description}
+        </p>
+      ) : null}
+
+      {/* Botão — escondido na impressão */}
       <button
         onClick={() => setIsModalOpen(true)}
-        className="bg-[#0f4c50] px-6 py-3 rounded-[8px] w-full text-white hover:bg-[#0d4247] transition-colors"
+        className="hide-on-print bg-[#0f4c50] px-6 py-3 rounded-[8px] w-full text-white hover:bg-[#0d4247] transition-colors"
       >
         Fazer Pedido
       </button>
@@ -81,9 +90,6 @@ function MenuProductCard({ product }: MenuProductCardProps) {
       />
     </div>
   );
-
-
-
 }
 
 interface MenuCategoryProps {
@@ -112,6 +118,7 @@ function MenuCategory({ title, products }: MenuCategoryProps) {
 export function HomeContent() {
   const { products, categories } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
+
   // Agrupar produtos por categoria
   const groupedProducts = categories.reduce((acc, category) => {
     acc[category] = products.filter((p) => p.category === category);
@@ -123,8 +130,24 @@ export function HomeContent() {
       ? products
       : products.filter((p) => p.category === selectedCategory);
 
+  const handlePrint = () => window.print();
+
   return (
     <div id="homeForprint" className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
+      {/* Utilitários de impressão (sem CSS externo) */}
+      <style>{`
+        @media print {
+          .hide-on-print { display: none !important; }
+          .show-on-print { display: block !important; }
+
+          /* Esconde automaticamente cabeçalhos/rodapés/navigation do layout */
+          nav, header, footer { display: none !important; }
+
+          /* Opcional: remover sombras no papel */
+          .shadow-md, .shadow-lg, .hover\\:shadow-lg { box-shadow: none !important; }
+        }
+      `}</style>
+
       {/* Título principal */}
       <div className="font-['Retrokia:Demo',_sans-serif] leading-[0] not-italic relative shrink-0 text-[#0f4c50] md:text-5xl text-3xl text-center tracking-[-1.28px]">
         <p className="leading-[1.3] whitespace-pre font-[Retrokia] ">
@@ -141,8 +164,8 @@ export function HomeContent() {
         </p>
       </div>
 
-      {/* Filtros de categoria */}
-      <div className="content-stretch flex gap-4 items-center justify-center relative shrink-0 flex-wrap">
+      {/* Filtros de categoria — não aparecem no cardápio (impressão) */}
+      <div className="hide-on-print content-stretch flex gap-4 items-center justify-center relative shrink-0 flex-wrap">
         <button
           onClick={() => setSelectedCategory("todos")}
           className={`box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[25px] shrink-0 transition-all hover:opacity-80 ${
@@ -189,6 +212,16 @@ export function HomeContent() {
           <MenuCategory title={selectedCategory} products={filteredProducts} />
         )}
       </div>
+
+      {/* Botão de imprimir — pequeno, canto inferior direito; só desktop e não imprime */}
+      <button
+        onClick={handlePrint}
+        aria-label="Imprimir"
+        title="Imprimir"
+        className="hide-on-print hidden md:flex fixed right-4 bottom-4 z-50 items-center justify-center p-2 rounded-full bg-[#0f4c50] text-white shadow-md hover:bg-[#0d4247] focus:outline-none"
+      >
+        <Printer className="w-5 h-5" />
+      </button>
     </div>
   );
 }
