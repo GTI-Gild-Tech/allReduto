@@ -19,12 +19,11 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api',
 });
 
-// ---------- URL helper (novo) ----------
+// ---------- URL helper ----------
 const toPublicUrl = (u?: string | null) => {
   if (!u) return u as any;                       // mantém falsy -> placeholder
   if (/^https?:\/\//i.test(u)) return u;         // já é absoluta
   const base = (api.defaults.baseURL || '').replace(/\/api$/, '');
-  // normaliza quando vem "arquivo.png" ou "uploads/arquivo.png"
   const path = u.startsWith('/uploads/') ? u
             : (u.startsWith('uploads/') ? `/${u}` : `/uploads/${u}`);
   return `${base}${path}`;
@@ -40,6 +39,45 @@ async function uploadImage(file: File): Promise<string> {
   return data?.url || data?.location || data?.secure_url;
 }
 
+// =====================
+// NORMALIZAÇÃO DE PREÇO
+// =====================
+
+// "1.234,56" | "1234,56" | "1234.56" | 12.5 -> "1234.56"
+function normalizeMoneyString(v: unknown, fallback = "0.00"): string {
+  if (v == null) return fallback;
+  if (typeof v === "number") return (v as number).toString();
+  const s = String(v).trim();
+  if (!s) return fallback;
+  return s.replace(/\./g, "").replace(",", ".");
+}
+
+// Normaliza campos de preço dentro de cada size (sem mudar o shape)
+function normalizeSizesPrices(sizes: any[] = []): any[] {
+  const PRICE_KEYS = [
+    "price", "preco", "valor",
+    "unit_price", "unitPrice",
+    "priceCents", "price_cents", "unit_price_cents", "valor_cents"
+  ];
+
+  return sizes.map((s) => {
+    const copy: any = { ...s };
+    for (const k of PRICE_KEYS) {
+      if (copy[k] != null) {
+        if (/_cents$/i.test(k) || /Cents$/.test(k)) {
+          // se vier "2,50" num campo *_cents, converte para 250
+          const n = parseFloat(normalizeMoneyString(copy[k], "0"));
+          copy[k] = Number.isFinite(n) ? Math.round(n * 100) : 0;
+        } else if (typeof copy[k] === "string") {
+          // campos em reais ficam como string com ponto decimal
+          copy[k] = normalizeMoneyString(copy[k]);
+        }
+      }
+    }
+    return copy;
+  });
+}
+
 // ---------- Contrato do contexto ----------
 type ProductsCtx = {
   products: Product[];
@@ -50,7 +88,7 @@ type ProductsCtx = {
   fetchData: () => Promise<void>;
 
   addProduct: (p: Product, imageFile?: File) => Promise<void>;
-  updateProduct: (p: Product, imageFile?: File) => Promise<void>; // <- aceita imageFile
+  updateProduct: (p: Product, imageFile?: File) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   moveProduct: (id: string, newCategory: string) => Promise<void>;
 
@@ -68,7 +106,7 @@ const mapProductDTO = (dto: any): Product => ({
   category: dto.category,
   description: dto.description,
   sizes: Array.isArray(dto.sizes) ? dto.sizes : [],
-  imageUrl: toPublicUrl(dto.imageUrl), // <- normaliza aqui
+  imageUrl: toPublicUrl(dto.imageUrl),
 });
 
 // ---------- Provider ----------
@@ -78,7 +116,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // NEW: mapa name -> id pra falar com o backend usando id
+  // name -> id
   const [categoryByName, setCategoryByName] = useState<Record<string, string>>({});
 
   // ---------- Helpers de estado ----------
@@ -176,6 +214,10 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       addProductLocal({ ...p, id: String(tempId), imageUrl: p.imageUrl ?? tempUrl });
 
       try {
+        // NORMALIZAÇÕES DE PREÇO (vírgula → ponto, cents quando aplicável)
+        const uniquePriceNorm = normalizeMoneyString((p as any).uniquePrice, "0.00");
+        const sizesNorm = normalizeSizesPrices(p.sizes || []);
+
         if (imageFile) {
           // ENVIA COMO FORMDATA (com arquivo)
           clearJsonHeaders();
@@ -183,21 +225,22 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('name', p.name);
           fd.append('category', p.category);
           fd.append('description', p.description ?? '');
-          fd.append('uniquePrice', String((p as any).uniquePrice ?? '0.00')); // NOT NULL no banco
-          fd.append('sizes', JSON.stringify(p.sizes || []));
+          fd.append('uniquePrice', uniquePriceNorm); // "12.50"
+          fd.append('sizes', JSON.stringify(sizesNorm));
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
           fd.append('file', imageFile);
-          const { data } = await api.post('/products', fd, { headers: {} }); // não forçar Content-Type
+
+          const { data } = await api.post('/products', fd, { headers: {} });
           replaceOrInsertProduct(mapProductDTO(data), String(tempId));
         } else {
-          // SEM arquivo: pode mandar JSON
+          // SEM arquivo: JSON
           const payload = {
             name: p.name,
             category: p.category,
             description: p.description ?? '',
-            uniquePrice: String((p as any).uniquePrice ?? '0.00'),
-            sizes: p.sizes || [],
+            uniquePrice: uniquePriceNorm,
+            sizes: sizesNorm,
             stock_qty: (p as any).stock_qty ?? 0,
             active: (p as any).active ?? 1,
             imageUrl: p.imageUrl ?? null,
@@ -223,6 +266,10 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       replaceProduct(p); // otimista
 
       try {
+        // NORMALIZAÇÕES DE PREÇO
+        const uniquePriceNorm = normalizeMoneyString((p as any).uniquePrice, "0.00");
+        const sizesNorm = normalizeSizesPrices(p.sizes || []);
+
         if (imageFile) {
           // FORMDATA (com arquivo)
           clearJsonHeaders();
@@ -230,11 +277,12 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('name', p.name);
           if (p.description != null) fd.append('description', p.description);
           fd.append('category', p.category);
-          fd.append('uniquePrice', String((p as any).uniquePrice ?? '0.00'));
-          fd.append('sizes', JSON.stringify(p.sizes || []));
+          fd.append('uniquePrice', uniquePriceNorm);
+          fd.append('sizes', JSON.stringify(sizesNorm));
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
           fd.append('file', imageFile);
+
           const { data } = await api.put(`/products/${p.id}`, fd, { headers: {} });
           replaceProduct(mapProductDTO(data));
         } else {
@@ -243,8 +291,8 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             name: p.name,
             description: p.description ?? '',
             category: p.category,
-            uniquePrice: String((p as any).uniquePrice ?? '0.00'),
-            sizes: p.sizes || [],
+            uniquePrice: uniquePriceNorm,
+            sizes: sizesNorm,
             stock_qty: (p as any).stock_qty ?? 0,
             active: (p as any).active ?? 1,
             imageUrl: p.imageUrl ?? null,
@@ -298,6 +346,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   // ---------- Ações em Categoria ----------
   const addCategoryFn: (name: string) => Promise<void> = useCallback(
     async (name) => {
+      if (!name) return;
       if (!categories.includes(name)) {
         setCategories((prev) => [...prev, name]); // otimista
       }
