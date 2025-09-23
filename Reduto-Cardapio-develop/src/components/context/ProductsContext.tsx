@@ -15,9 +15,8 @@ type CategoryDTO = { id?: string; category_id?: string | number; name: string; s
 type ProductDTO = Product; // ajuste se seu backend devolver outro shape
 
 // ---------- Axios base ----------
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3001/api',
-});
+
+import { api } from '../../services/api';
 
 // ---------- URL helper ----------
 const toPublicUrl = (u?: string | null) => {
