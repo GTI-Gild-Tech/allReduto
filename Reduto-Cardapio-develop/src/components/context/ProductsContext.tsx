@@ -98,16 +98,47 @@ type ProductsCtx = {
 
 const ProductsContext = createContext<ProductsCtx | undefined>(undefined);
 
-// helper de normalização: garante que sempre haja um "id" válido
-const mapProductDTO = (dto: any): Product => ({
-  id: String(dto.id ?? dto._id ?? dto.productId ?? dto.product_id),
-  name: dto.name,
-  category: dto.category,
-  description: dto.description,
-  sizes: Array.isArray(dto.sizes) ? dto.sizes : [],
-  imageUrl: toPublicUrl(dto.imageUrl),
-});
+const toNumber = (v: unknown) => {
+  if (v == null) return null;
+  const n = Number(String(v).trim().replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
 
+// ⚠️ SUBSTITUA o seu mapProductDTO por este:
+const mapProductDTO = (dto: any): Product => {
+  // 1) obter sizes do jeito que vier (array, string JSON, null…)
+  let rawSizes: any = dto.sizes;
+  if (!Array.isArray(rawSizes) && typeof rawSizes === "string") {
+    try {
+      const parsed = JSON.parse(rawSizes);
+      if (Array.isArray(parsed)) rawSizes = parsed;
+    } catch { /* ignora */ }
+  }
+
+  // 2) normalizar cada price para número
+  let sizes: { size: string; price: number }[] = [];
+  if (Array.isArray(rawSizes)) {
+    sizes = rawSizes.map((s: any) => ({
+      size: s.size ?? s.label ?? s.name ?? "Único",
+      price: toNumber(s.price ?? s.price_cents / 100) ?? 0,
+    }));
+  }
+
+  // 3) fallback: se não veio sizes, usar preço único
+  if (!sizes.length) {
+    const pUni = toNumber(dto.uniquePrice ?? dto.price ?? dto.unit_price);
+    if (pUni !== null) sizes = [{ size: "Único", price: pUni }];
+  }
+
+  return {
+    id: String(dto.id ?? dto._id ?? dto.productId ?? dto.product_id),
+    name: dto.name,
+    category: dto.category,
+    description: dto.description,
+    sizes,
+    imageUrl: toPublicUrl(dto.imageUrl),
+  };
+};
 // ---------- Provider ----------
 export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>([]);
