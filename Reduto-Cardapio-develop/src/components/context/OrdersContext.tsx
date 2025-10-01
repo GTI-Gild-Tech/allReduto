@@ -218,9 +218,11 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, []);
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+ useEffect(() => {
+  refresh(); // carrega imediatamente
+  const id = window.setInterval(refresh, 5000); // atualiza a cada 5s
+  return () => clearInterval(id);
+}, [refresh]);
 
   const createOrderFromCart = useCallback(
     async (params: CreateFromCartParams) => {

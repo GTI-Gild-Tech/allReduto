@@ -1,12 +1,15 @@
-import { useDrag, useDrop } from "react-dnd";
+//import { useDrag, useDrop } from "react-dnd";
+import { useDrag, useDrop, type DragSourceMonitor, type DropTargetMonitor } from "react-dnd";
 import svgPaths from "../../imports/svg-sb6ezzbr86";
+
+
 
 export interface Product {
   id: string;
   name: string;
   category: string;
   description?: string;
-  sizes: { size: string; price: string }[];
+  sizes: { size: string; price: number | string }[];
   imageUrl?: string;     // ← nova: imagem principal (data URL por enquanto)
 }
 
@@ -21,6 +24,9 @@ function DeleteIcon() {
     </div>
   );
 }
+
+
+
 
 function EditIcon() {
   return (
@@ -50,9 +56,14 @@ export function ProductCard({ product, onMove, onEdit, onDelete }: ProductCardPr
     }),
   }));
 
-  const formatPrices = () => {
-    return product.sizes.map(size => `${size.size} - R$${size.price}`).join(' | ');
-  };
+const formatPrices = () =>
+  product.sizes
+    .map((s) => `\u00DAnico` === s.size
+      ? `${s.size} - R$ ${Number(s.price).toFixed(2)}`
+      : `${s.size} - R$ ${Number(s.price).toFixed(2)}`
+    )
+    .join(" | ");
+
 
   return (
     <div
