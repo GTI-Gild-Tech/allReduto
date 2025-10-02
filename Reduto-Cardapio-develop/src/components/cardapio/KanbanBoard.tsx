@@ -150,7 +150,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
     setFormData({
       name: product.name,
       category: product.category,
-      description: '',
+      description:  product.description ?? '',
       priceType: 'Tamanho',
       selectedSizes: product.sizes.map(s => s.size),
       sizePrices: product.sizes.reduce((acc, size) => ({ ...acc, [size.size]: size.price }), {} as Record<string, string>),
