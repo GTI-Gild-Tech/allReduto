@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import api from "../../services/api";
 import { fromApiStatus, toApiStatus, PtStatus } from "../../services/status";
+import ErrorPopup from "../ErrorPopup";
 
 /* =========================================================
    Tipos
@@ -179,6 +180,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [orders, setOrders] = useState<OrderUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -190,8 +192,8 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       const mapped = list.map(formatOrderDTO);
       setOrders(mapped);
     } catch (err: any) {
-      console.error("[OrdersContext] GET /orders error:", err);
       setError(err?.message ?? "Erro ao carregar pedidos");
+      setShowErrorPopup(true);
     } finally {
       setLoading(false);
     }
@@ -205,8 +207,9 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       } catch {}
     };
     doRefresh();
-    const id = window.setInterval(refresh, 5000);
-    return () => clearInterval(id);
+    // Comentado temporariamente para evitar popup constante quando backend está offline
+    // const id = window.setInterval(refresh, 5000);
+    // return () => clearInterval(id);
   }, [refresh]);
 
   const createOrderFromCart = useCallback(
@@ -340,5 +343,18 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     ]
   );
 
-  return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>;
+  return (
+    <OrdersContext.Provider value={value}>
+      {children}
+      {showErrorPopup && error && (
+        <ErrorPopup
+          message={error}
+          onClose={() => {
+            setShowErrorPopup(false);
+            setError(null);
+          }}
+        />
+      )}
+    </OrdersContext.Provider>
+  );
 };
