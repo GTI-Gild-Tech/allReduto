@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useOrders } from "../context/OrdersContext";
 import { OrderSuccess } from "../public_site/OrderSuccess";
+import ErrorPopup from "../ErrorPopup";
 
 type Props = {
   isOpen: boolean;
@@ -33,6 +34,8 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
   const [tableNumber, setTableNumber] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const subtotalCents = useMemo(
     () =>
@@ -73,9 +76,9 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
       setStep("cart");
       setCustomerName("");
       setTableNumber("");
-    } catch (err) {
-      console.error("Falha ao finalizar pedido:", err);
-      alert("Falha ao finalizar pedido. Tente novamente.");
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Falha ao finalizar pedido. Tente novamente.");
+      setShowErrorPopup(true);
     } finally {
       setSaving(false);
     }
@@ -222,6 +225,17 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
           )}
         </footer>
       </aside>
+      
+      {/* Error Popup */}
+      {showErrorPopup && (
+        <ErrorPopup
+          message={errorMessage}
+          onClose={() => {
+            setShowErrorPopup(false);
+            setErrorMessage("");
+          }}
+        />
+      )}
     </div>
   );
 }

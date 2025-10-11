@@ -10,19 +10,7 @@ import React, {
 } from "react";
 import api from "../../services/api";
 import { fromApiStatus, toApiStatus, PtStatus } from "../../services/status";
-
-// helper para converter reais -> centavos
-const toCents = (v: unknown): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.round(n * 100) : 0;
-};
-
-// helper para exibir em BRL
-const formatBRL = (cents: number | undefined | null) =>
-  ((Number.isFinite(cents as number) ? (cents as number) : 0) / 100).toLocaleString(
-    "pt-BR",
-    { style: "currency", currency: "BRL" }
-  );
+import ErrorPopup from "../ErrorPopup";
 
 /* =========================================================
    Tipos
@@ -65,7 +53,7 @@ type OrdersContextType = {
   error: string | null;
 
   refresh: () => Promise<void>;
-  createOrderFromCart: (params: CreateFromCartParams) => Promise<void>;
+  createOrderFromCart: (params: CreateFromCartParams) => Promise<OrderUI>;
   updateOrderStatus: (id: number | string, newStatusPt: PtStatus) => Promise<void>;
   updateOrderInfo: (
     id: number | string,
@@ -106,80 +94,72 @@ function formatOrderDTO(dto: any): OrderUI {
     dto?.table ??
     "";
 
-  // 1) pegue "items" do DTO, sem assumir o tipo
-let rawItems: unknown =
-  dto?.order_items ??
-  dto?.orderItems ??
-  dto?.OrderItems ??
-  dto?.items ??
-  [];
+  // itens do pedido vindos do backend em diversos formatos
+  let rawItems: unknown =
+    dto?.order_items ??
+    dto?.orderItems ??
+    dto?.OrderItems ??
+    dto?.items ??
+    [];
 
-// 2) se vier no formato { rows: [...] } (ex.: Sequelize/Prisma com include), normalize
-if (
-  rawItems &&
-  typeof rawItems === "object" &&
-  "rows" in (rawItems as Record<string, unknown>) &&
-  Array.isArray((rawItems as Record<string, unknown>).rows)
-) {
-  rawItems = (rawItems as { rows: unknown }).rows;
-}
+  if (!Array.isArray(rawItems)) rawItems = [];
 
-// 3) garanta que temos um array para mapear
-const itemsArray: any[] = Array.isArray(rawItems) ? (rawItems as any[]) : [];
+  const items: OrderItemUI[] = (rawItems as any[]).map((it) => {
+    const p = it?.product ?? it?.Product ?? {};
+    const name = p?.name ?? it?.product_name ?? it?.name ?? "";
+    const category =
+      p?.category?.name ??
+      p?.Category?.name ??
+      it?.category_name ??
+      it?.category ??
+      "";
+    const size = it?.size ?? it?.Size ?? "";
+    const unitPriceCents =
+      Number(
+        it?.unit_price_cents ??
+          it?.unitPriceCents ??
+          it?.price_cents ??
+          Math.round(Number(it?.price ?? 0) * 100)
+      ) || 0;
+    const quantity = Number(it?.quantity ?? it?.qty ?? 1) || 1;
+    const subtotalCents =
+      Number(
+        it?.subtotal_cents ??
+          it?.subtotalCents ??
+          it?.total_cents ??
+          it?.totalCents ??
+          Math.round(unitPriceCents * quantity)
+      ) || 0;
 
-// 4) mapeie para o modelo do front
-const items: OrderItemUI[] = itemsArray.map((it: any) => {
-  const qty =
-    Number(
-      it?.qty ??
-        it?.quantity ??
-        it?.Quantity ??
-        it?.qtde ??
-        it?.qtd
-    ) || 0;
-
-  const unitPriceCents =
-    Number(it?.unit_price_cents ?? it?.unitPriceCents) ||
-    toCents(it?.unit_price ?? it?.unitPrice ?? it?.price);
-
-  const subtotalCents =
-    Number(it?.total_cents ?? it?.subtotal_cents) ||
-    unitPriceCents * qty;
-
-  const name =
-    it?.product_name ??
-    it?.["orderItems.product.name"] ?? // quando o backend faz SELECT alias
-    it?.product?.name ??
-    it?.Product?.name ??
-    it?.name ??
-    "";
-
-  const size =
-    it?.size ?? it?.Size ?? it?.tamanho ?? it?.variant ?? "";
-
-  return {
-    name,
-    size,
-    quantity: qty,
-    unitPriceCents,
-    subtotalCents,
-  };
-});
-
-  const dtoTotalCents =
-    Number(dto?.total_cents ?? dto?.total_price_cents) ||
-    toCents(dto?.total_price ?? dto?.total ?? dto?.grand_total);
-
-  const sumItems = items.reduce(
-    (acc, it) => acc + (Number(it.subtotalCents) || 0),
-    0
-  );
-  const totalCents = dtoTotalCents > 0 ? dtoTotalCents : sumItems;
-
-  const statusPt = fromApiStatus(dto?.status);
+    return {
+      name,
+      size,
+      quantity,
+      unitPriceCents,
+      subtotalCents,
+      category,
+    };
+  });
 
   const createdAt =
-    dto?.created_at ?? dto?.createdAt ?? dto?.CreatedAt ?? undefined;
+    dto?.created_at ?? dto?.createdAt ?? dto?.created_at?.toString?.() ?? "";
+
+  const totalCents =
+    Number(
+      dto?.total_cents ??
+        dto?.totalCents ??
+        dto?.total ??
+        Math.round(items.reduce((acc, it) => acc + (it.subtotalCents ?? 0), 0))
+    ) || 0;
+
+  const statusApi =
+    dto?.status ??
+    dto?.order_status ??
+    dto?.OrderStatus ??
+    dto?.Status ??
+    "pending";
+
+  const statusPt = fromApiStatus(statusApi);
 
   return {
     id,
@@ -200,32 +180,40 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [orders, setOrders] = useState<OrderUI[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const { data } = await api.get("/orders");
-      console.log("[OrdersContext] GET /orders → data:", data);
+      //console.log("[OrdersContext] GET /orders → data:", data);
       const list: any[] = Array.isArray(data) ? data : data?.orders ?? [];
       const mapped = list.map(formatOrderDTO);
       setOrders(mapped);
     } catch (err: any) {
-      console.error("[OrdersContext] GET /orders error:", err);
-      setError(err?.message || "Falha ao carregar pedidos.");
+      setError(err?.message ?? "Erro ao carregar pedidos");
+      setShowErrorPopup(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
- useEffect(() => {
-  refresh(); // carrega imediatamente
-  const id = window.setInterval(refresh, 5000); // atualiza a cada 5s
-  return () => clearInterval(id);
-}, [refresh]);
+  // auto-refresh: carrega e depois atualiza a cada 5s (ajuste se quiser)
+  useEffect(() => {
+    const doRefresh = async () => {
+      try {
+        await refresh();
+      } catch {}
+    };
+    doRefresh();
+    // Comentado temporariamente para evitar popup constante quando backend está offline
+    // const id = window.setInterval(refresh, 5000);
+    // return () => clearInterval(id);
+  }, [refresh]);
 
   const createOrderFromCart = useCallback(
-    async (params: CreateFromCartParams) => {
+    async (params: CreateFromCartParams): Promise<OrderUI> => {
       const { name, table, items } = params;
       const payload = {
         customer: { name },
@@ -247,9 +235,24 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         const saved = res.data?.order ?? res.data;
         const formatted = formatOrderDTO(saved);
         setOrders((prev) => [formatted, ...prev]);
+        return formatted; // ✅ devolve o pedido confirmado pelo backend
       } catch (err: any) {
         console.error("[OrdersContext] POST /orders error:", err);
-        throw err;
+
+        // Extrai mensagem do backend (se houver) e padroniza para o usuário
+        const backendMsg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.message;
+
+        const userMsg =
+          backendMsg && String(backendMsg).trim().length > 0
+            ? String(backendMsg)
+            : "Não conseguimos salvar seu pedido. Tente novamente.";
+
+        const e = new Error(userMsg);
+        (e as any).status = err?.response?.status;
+        throw e; // ❌ UI captura e exibe a mensagem amigável
       }
     },
     []
@@ -258,7 +261,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const updateOrderStatus = useCallback(
     async (id: number | string, newStatusPt: PtStatus) => {
       const status = toApiStatus(newStatusPt);
-      console.log("[OrdersContext] PUT /orders/%s payload:", id, { status });
+      console.log("[OrdersContext] PUT /orders/%s status:", id, status);
       try {
         const res = await api.put(`/orders/${id}`, { status });
         console.log("[OrdersContext] PUT /orders response:", res.data);
@@ -317,7 +320,7 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   }, []);
 
-  const value: OrdersContextType = useMemo(
+  const value = useMemo(
     () => ({
       orders,
       loading,
@@ -328,8 +331,30 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       updateOrderInfo,
       deleteOrder,
     }),
-    [orders, loading, error, refresh, createOrderFromCart, updateOrderStatus, updateOrderInfo, deleteOrder]
+    [
+      orders,
+      loading,
+      error,
+      refresh,
+      createOrderFromCart,
+      updateOrderStatus,
+      updateOrderInfo,
+      deleteOrder,
+    ]
   );
 
-  return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>;
+  return (
+    <OrdersContext.Provider value={value}>
+      {children}
+      {showErrorPopup && error && (
+        <ErrorPopup
+          message={error}
+          onClose={() => {
+            setShowErrorPopup(false);
+            setError(null);
+          }}
+        />
+      )}
+    </OrdersContext.Provider>
+  );
 };
