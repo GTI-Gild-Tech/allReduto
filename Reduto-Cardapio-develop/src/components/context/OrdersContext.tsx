@@ -3,7 +3,6 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   ReactNode,
@@ -198,19 +197,6 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(false);
     }
   }, []);
-
-  // auto-refresh: carrega e depois atualiza a cada 5s (ajuste se quiser)
-  useEffect(() => {
-    const doRefresh = async () => {
-      try {
-        await refresh();
-      } catch {}
-    };
-    doRefresh();
-    // Comentado temporariamente para evitar popup constante quando backend está offline
-    // const id = window.setInterval(refresh, 5000);
-    // return () => clearInterval(id);
-  }, [refresh]);
 
   const createOrderFromCart = useCallback(
     async (params: CreateFromCartParams): Promise<OrderUI> => {

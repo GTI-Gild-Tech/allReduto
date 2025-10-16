@@ -6,6 +6,7 @@ import StatusSelect from "./StatusSelect";
 import type { PtStatus } from "../../services/status";
 import { PedidosTitle } from "./PedidosTitle";
 import ConfirmDialog from "../shared/ConfirmDialog";
+import bellSound from "../../assets/bell.mp3";
 
 /* =========================
    Tipos (ampliados p/ modal)
@@ -216,6 +217,54 @@ export default function PedidosContent() {
   const isSaving = (id: string | number) => savingId === id;
 
   const [confirmId, setConfirmId] = React.useState<string | number | null>(null);
+  const [previousOrderCount, setPreviousOrderCount] = React.useState(0);
+
+  // Pré-carrega o áudio para garantir reprodução rápida
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  
+  React.useEffect(() => {
+    audioRef.current = new Audio(bellSound);
+    audioRef.current.preload = 'auto';
+  }, []);
+
+  // Função para tocar som de notificação (arquivo MP3)
+  const playNotificationSound = React.useCallback(() => {
+    try {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0; // Reinicia o áudio
+        audioRef.current.play().catch((err) => {
+          console.error("[PedidosContent] Erro ao tocar som de notificação:", err);
+        });
+      }
+    } catch (err) {
+      console.error("[PedidosContent] Erro ao tocar som de notificação:", err);
+    }
+  }, []);
+
+  // Auto-refresh com notificação sonora (só nesta página)
+  React.useEffect(() => {
+    // Carrega imediatamente
+    refresh();
+
+    // Configura intervalo de atualização
+    const intervalId = window.setInterval(async () => {
+      await refresh();
+    }, 5000); // atualiza a cada 5s
+
+    return () => clearInterval(intervalId);
+  }, [refresh]);
+
+  // Detecta novos pedidos e toca som
+  React.useEffect(() => {
+    const currentCount = orders.length;
+    
+    if (previousOrderCount > 0 && currentCount > previousOrderCount) {
+      console.log("[PedidosContent] Novo pedido detectado! Tocando notificação...");
+      playNotificationSound();
+    }
+    
+    setPreviousOrderCount(currentCount);
+  }, [orders.length, previousOrderCount, playNotificationSound]);
 
 
   // filtro de data
