@@ -21,7 +21,13 @@ const isValidStoredPath = (u) =>
 // ---------- CRUD ----------
 const getAllProducts = async (_req, res) => {
   try {
-    const products = await Product.findAll({ order: [['product_id', 'DESC']] });
+    const products = await Product.findAll({ 
+      order: [
+        ['category', 'ASC'],
+        ['order', 'ASC'],
+        ['product_id', 'DESC']
+      ] 
+    });
     return res.status(200).json(products);
   } catch (err) {
     console.error('GET /api/products error:', err?.original?.sqlMessage || err);
@@ -70,6 +76,16 @@ console.log('[createProduct] body keys:', Object.keys(req.body));
       ? `/uploads/${file.filename}`
       : (isValidStoredPath(body.imageUrl) ? body.imageUrl : null);
 
+    // Determinar a ordem: se não especificada, usar a próxima disponível na categoria
+    let order = body.order != null ? Number(body.order) : null;
+    if (order === null) {
+      const maxOrderProduct = await Product.findOne({
+        where: { category: body.category },
+        order: [['order', 'DESC']]
+      });
+      order = maxOrderProduct ? (maxOrderProduct.order || 0) + 1 : 0;
+    }
+
     const payload = {
       name: body.name,
       description: body.description ?? '',
@@ -79,6 +95,7 @@ console.log('[createProduct] body keys:', Object.keys(req.body));
       stock_qty: Number(body.stock_qty ?? 0),
       active: body.active == null ? 1 : Number(body.active),
       imageUrl,
+      order,
     };
 
     const created = await Product.create(payload);
@@ -105,6 +122,7 @@ const updateProduct = async (req, res) => {
       ...(body.sizes != null       ? { sizes: parseSizes(body.sizes) } : {}),
       ...(body.stock_qty != null   ? { stock_qty: Number(body.stock_qty) } : {}),
       ...(body.active != null      ? { active: Number(body.active) } : {}),
+      ...(body.order != null       ? { order: Number(body.order) } : {}),
       // se vier arquivo, troca; se não, só aceita caminho curto de /uploads
       ...(file
         ? { imageUrl: `/uploads/${file.filename}` }
@@ -140,10 +158,81 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+const reorderProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category, newOrder } = req.body;
+
+    console.log('[reorderProduct] id:', id, 'category:', category, 'newOrder:', newOrder);
+
+    if (category == null || newOrder == null) {
+      return res.status(400).json({ 
+        message: 'Campos "category" e "newOrder" são obrigatórios.' 
+      });
+    }
+
+    // Buscar o produto
+    const product = await Product.findByPk(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Produto não encontrado.' });
+    }
+
+    // Buscar todos os produtos da categoria ordenados
+    const categoryProducts = await Product.findAll({
+      where: { category },
+      order: [['order', 'ASC'], ['product_id', 'ASC']]
+    });
+
+    console.log('[reorderProduct] Found', categoryProducts.length, 'products in category');
+
+    // Encontrar o índice atual do produto
+    const currentIndex = categoryProducts.findIndex(p => p.product_id === parseInt(id));
+    
+    if (currentIndex === -1) {
+      return res.status(404).json({ message: 'Produto não encontrado na categoria.' });
+    }
+
+    // Se a posição não mudou, retornar sem fazer nada
+    if (currentIndex === newOrder) {
+      console.log('[reorderProduct] No change in position');
+      return res.status(200).json(product);
+    }
+
+    // Remover o produto da posição atual
+    const [movedProduct] = categoryProducts.splice(currentIndex, 1);
+    
+    // Inserir na nova posição
+    categoryProducts.splice(newOrder, 0, movedProduct);
+
+    // Atualizar a ordem de todos os produtos da categoria em uma transação
+    const updates = categoryProducts.map((p, index) => {
+      return Product.update(
+        { order: index },
+        { where: { product_id: p.product_id } }
+      );
+    });
+
+    await Promise.all(updates);
+
+    console.log('[reorderProduct] Updated', updates.length, 'products');
+
+    // Retornar o produto atualizado
+    const updatedProduct = await Product.findByPk(id);
+    return res.status(200).json(updatedProduct);
+  } catch (err) {
+    console.error('PATCH /api/products/:id/reorder error:', err?.original?.sqlMessage || err);
+    return res.status(500).json({
+      message: 'Erro ao reordenar produto.',
+      error: err?.original?.sqlMessage || err?.message || String(err),
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
   createProduct,
   updateProduct,
   deleteProduct,
+  reorderProduct,
 };

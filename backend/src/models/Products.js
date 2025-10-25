@@ -22,6 +22,12 @@ module.exports = (sequelize) => {
     type: DataTypes.STRING,
     allowNull: true
     },
+    order: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: 0,
+      comment: 'Ordem do produto dentro da categoria'
+    },
   },
    {
     sequelize,

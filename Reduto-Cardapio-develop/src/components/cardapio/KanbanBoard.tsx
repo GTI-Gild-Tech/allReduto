@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Cropper from "react-easy-crop";
 import { DndProvider } from 'react-dnd';
-import { useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { KanbanColumn, Product } from "./KanbanComponents";
 import { useProducts } from "../context/ProductsContext";
@@ -153,7 +152,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       description:  product.description ?? '',
       priceType: 'Tamanho',
       selectedSizes: product.sizes.map(s => s.size),
-      sizePrices: product.sizes.reduce((acc, size) => ({ ...acc, [size.size]: size.price }), {} as Record<string, string>),
+      sizePrices: product.sizes.reduce((acc, size) => ({ ...acc, [size.size]: String(size.price) }), {} as Record<string, string>),
       customOptions: [],
       uniquePrice: '',
       imageUrl: product.imageUrl ?? '',
@@ -716,6 +715,7 @@ export function KanbanBoard() {
     updateProduct,
     deleteProduct,
     moveProduct,
+    reorderProducts,
     addCategory,
     updateCategory,
     deleteCategory
@@ -740,6 +740,23 @@ export function KanbanBoard() {
       console.error('Error in handleMoveProduct:', err);
       alert('Erro ao mover produto: ' + (err.message || 'Erro desconhecido'));
     });
+  };
+
+  const handleReorderProducts = (category: string, productId: string, newIndex: number) => {
+    console.log('KanbanBoard.handleReorderProducts:', { category, productId, newIndex });
+    
+    // Debounce: cancelar chamadas anteriores pendentes
+    if ((window as any).__reorderTimeout) {
+      clearTimeout((window as any).__reorderTimeout);
+    }
+    
+    // Aguardar 100ms antes de enviar para o backend (para agrupar múltiplas mudanças)
+    (window as any).__reorderTimeout = setTimeout(() => {
+      reorderProducts(category, productId, newIndex).catch(err => {
+        console.error('Error in handleReorderProducts:', err);
+        alert('Erro ao reordenar produto: ' + (err.message || 'Erro desconhecido'));
+      });
+    }, 100);
   };
 
   const handleEditProduct = (product: Product) => {
@@ -889,7 +906,9 @@ export function KanbanBoard() {
         {/* Kanban Columns */}
         <div className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto pt-1">
           {categories.map((category) => {
-            const categoryProducts = products.filter(p => p.category === category);
+            const categoryProducts = products
+              .filter(p => p.category === category)
+              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             const canDeleteCategory = categories.length > 1 && categoryProducts.length === 0;
             
             return (
@@ -899,6 +918,7 @@ export function KanbanBoard() {
                 category={category}
                 products={categoryProducts}
                 onMove={handleMoveProduct}
+                onReorder={handleReorderProducts}
                 onEdit={handleEditProduct}
                 onDelete={handleDeleteProduct}
                 onDeleteCategory={canDeleteCategory ? handleDeleteCategory : undefined}

@@ -90,6 +90,7 @@ type ProductsCtx = {
   updateProduct: (p: Product, imageFile?: File) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   moveProduct: (id: string, newCategory: string) => Promise<void>;
+  reorderProducts: (category: string, productId: string, newIndex: number) => Promise<void>;
 
   addCategory: (name: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
@@ -137,6 +138,7 @@ const mapProductDTO = (dto: any): Product => {
     description: dto.description,
     sizes,
     imageUrl: toPublicUrl(dto.imageUrl),
+    order: dto.order ?? 0,
   };
 };
 // ---------- Provider ----------
@@ -450,6 +452,72 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       [categories, products, categoryByName, fetchData]
     );
 
+  const reorderProductsFn: (category: string, productId: string, newIndex: number) => Promise<void> =
+    useCallback(
+      async (category, productId, newIndex) => {
+        console.log('[reorderProductsFn] Reordering:', { category, productId, newIndex });
+        
+        // Snapshot do estado atual para rollback
+        const snapshot = products.slice();
+        
+        const categoryProducts = products
+          .filter((p) => p.category === category)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        
+        const productIndex = categoryProducts.findIndex((p) => p.id === productId);
+        if (productIndex === -1) {
+          console.warn('[reorderProductsFn] Product not found in category');
+          return;
+        }
+        
+        // Se a posição não mudou, não fazer nada
+        if (productIndex === newIndex) {
+          console.log('[reorderProductsFn] No change in position');
+          return;
+        }
+        
+        // Reordenar localmente (otimista)
+        const [movedProduct] = categoryProducts.splice(productIndex, 1);
+        categoryProducts.splice(newIndex, 0, movedProduct);
+        
+        // Atualizar os índices de ordem
+        const updatedProducts = categoryProducts.map((p, idx) => ({
+          ...p,
+          order: idx
+        }));
+        
+        // Atualizar estado local IMEDIATAMENTE
+        setProducts((prev) => {
+          const otherProducts = prev.filter((p) => p.category !== category);
+          return [...otherProducts, ...updatedProducts];
+        });
+        
+        try {
+          // Enviar a nova ordem para o backend
+          const response = await api.patch(`/products/${productId}/reorder`, { 
+            category,
+            newOrder: newIndex 
+          });
+          
+          console.log('[reorderProductsFn] Backend response:', response.data);
+          
+          // Atualizar com os dados do backend para garantir consistência
+          if (response.data) {
+            const updatedProduct = mapProductDTO(response.data);
+            setProducts((prev) => 
+              prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+            );
+          }
+        } catch (e) {
+          console.error('[reorderProductsFn] Error:', e);
+          // Rollback para o snapshot
+          setProducts(snapshot);
+          throw e;
+        }
+      },
+      [products]
+    );
+
   const deleteCategoryFn: (name: string) => Promise<void> = useCallback(
     async (name) => {
       const prevCats = categories;
@@ -487,6 +555,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       updateProduct: updateProductFn,
       deleteProduct: deleteProductFn,
       moveProduct: moveProductFn,
+      reorderProducts: reorderProductsFn,
 
       addCategory: addCategoryFn,
       updateCategory: updateCategoryFn,
@@ -502,6 +571,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       updateProductFn,
       deleteProductFn,
       moveProductFn,
+      reorderProductsFn,
       addCategoryFn,
       updateCategoryFn,
       deleteCategoryFn,

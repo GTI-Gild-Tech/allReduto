@@ -1,5 +1,5 @@
 //import { useDrag, useDrop } from "react-dnd";
-import { useDrag, useDrop, type DragSourceMonitor, type DropTargetMonitor } from "react-dnd";
+import { useDrag, useDrop } from "react-dnd";
 import svgPaths from "../../imports/svg-sb6ezzbr86";
 
 
@@ -11,6 +11,7 @@ export interface Product {
   description?: string;
   sizes: { size: string; price: number | string }[];
   imageUrl?: string;     // ← nova: imagem principal (data URL por enquanto)
+  order?: number;        // ← ordem do produto dentro da categoria
 }
 
 function DeleteIcon() {
@@ -42,19 +43,54 @@ function EditIcon() {
 
 interface ProductCardProps {
   product: Product;
-  onMove: (productId: string, newCategory: string) => void;
+  index: number;
+  onMove: (productId: string, newCategory: string) => void; // usado pela KanbanColumn quando drop entre categorias
+  onReorder: (dragIndex: number, hoverIndex: number) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
 }
 
-export function ProductCard({ product, onMove, onEdit, onDelete }: ProductCardProps) {
+export function ProductCard({ product, index, onMove, onReorder, onEdit, onDelete }: ProductCardProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
     type: 'product',
-    item: { id: product.id, category: product.category },
+    item: { id: product.id, category: product.category, index },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
-  }));
+  }), [product.id, product.category, index]);
+
+  const [, drop] = useDrop(() => ({
+    accept: 'product',
+    hover: (item: { id: string; category: string; index: number }, monitor) => {
+      if (!monitor.isOver({ shallow: true })) {
+        return;
+      }
+      
+      if (item.id === product.id) {
+        return;
+      }
+      
+      // Se for da mesma categoria, reordenar
+      if (item.category === product.category) {
+        const dragIndex = item.index;
+        const hoverIndex = index;
+        
+        if (dragIndex === hoverIndex) {
+          return;
+        }
+        
+        // Chama reorder apenas uma vez
+        onReorder(dragIndex, hoverIndex);
+        
+        // Atualiza o índice do item arrastado para evitar múltiplas chamadas
+        item.index = hoverIndex;
+      }
+    },
+  }), [product.id, product.category, index, onReorder]);
+
+  const ref = (node: HTMLDivElement | null) => {
+    drag(drop(node));
+  };
 
 const formatPrices = () =>
   product.sizes
@@ -67,7 +103,7 @@ const formatPrices = () =>
 
   return (
     <div
-      ref={drag}
+      ref={ref}
       className={`bg-[#e4ddcd] box-border content-stretch flex flex-col gap-2 items-start justify-start px-[15px] py-5 relative rounded-[8px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.12),0px_16px_32px_0px_rgba(0,0,0,0.08)] shrink-0 w-80 cursor-move transition-all duration-200 ${
         isDragging ? 'opacity-50 rotate-1 scale-105' : 'hover:shadow-lg'
       }`}
@@ -108,6 +144,7 @@ interface KanbanColumnProps {
   category: string;
   products: Product[];
   onMove: (productId: string, newCategory: string) => void;
+  onReorder: (category: string, productId: string, newIndex: number) => void;
   onEdit: (product: Product) => void;
   onDelete: (productId: string) => void;
   onDeleteCategory?: (category: string) => void;
@@ -115,7 +152,17 @@ interface KanbanColumnProps {
   canDeleteCategory?: boolean;
 }
 
-export function KanbanColumn({ title, category, products, onMove, onEdit, onDelete, onDeleteCategory, onEditCategory, canDeleteCategory }: KanbanColumnProps) {
+export function KanbanColumn({ title, category, products, onMove, onReorder, onEdit, onDelete, onDeleteCategory, onEditCategory, canDeleteCategory }: KanbanColumnProps) {
+  const handleReorder = (dragIndex: number, hoverIndex: number) => {
+    if (dragIndex === hoverIndex) return;
+    
+    const draggedProduct = products[dragIndex];
+    if (!draggedProduct) return;
+    
+    // Chamar apenas quando a posição mudar
+    onReorder(category, draggedProduct.id, hoverIndex);
+  };
+
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'product',
     drop: (item: { id: string; category: string }) => {
@@ -126,7 +173,7 @@ export function KanbanColumn({ title, category, products, onMove, onEdit, onDele
     collect: (monitor: { isOver: () => any; }) => ({
       isOver: monitor.isOver(),
     }),
-  }));
+  }), [category, onMove]);
 
   return (
     <div
@@ -151,11 +198,13 @@ export function KanbanColumn({ title, category, products, onMove, onEdit, onDele
           )}
         </div>
         
-        {products.map((product) => (
+        {products.map((product, index) => (
           <ProductCard
             key={product.id}
             product={product}
+            index={index}
             onMove={onMove}
+            onReorder={handleReorder}
             onEdit={onEdit}
             onDelete={onDelete}
           />
