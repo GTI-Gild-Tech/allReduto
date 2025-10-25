@@ -735,7 +735,11 @@ export function KanbanBoard() {
   }, [categories]);
 
   const handleMoveProduct = (productId: string, newCategory: string) => {
-    moveProduct(productId, newCategory);
+    console.log('KanbanBoard.handleMoveProduct:', { productId, newCategory });
+    moveProduct(productId, newCategory).catch(err => {
+      console.error('Error in handleMoveProduct:', err);
+      alert('Erro ao mover produto: ' + (err.message || 'Erro desconhecido'));
+    });
   };
 
   const handleEditProduct = (product: Product) => {

@@ -15,6 +15,7 @@ router.get('/:id', productController.getProductById);
 // use o NOME DO CAMPO "file"
 router.post('/', reqLogger, upload.single('file'), productController.createProduct);
 router.put('/:id', reqLogger, upload.single('file'), productController.updateProduct);
+router.patch('/:id', reqLogger, upload.single('file'), productController.updateProduct);
 
 router.delete('/:id', productController.deleteProduct);
 

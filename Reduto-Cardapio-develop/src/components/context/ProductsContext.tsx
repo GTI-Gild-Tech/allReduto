@@ -357,15 +357,30 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const moveProductFn: (id: string, newCategory: string) => Promise<void> =
     useCallback(
       async (id, newCategory) => {
+        console.log('moveProductFn called:', { id, newCategory });
         const prev = products.find((x) => x.id === id);
-        if (!prev) return;
+        if (!prev) {
+          console.log('Product not found:', id);
+          return;
+        }
 
+        console.log('Moving product:', prev.name, 'from', prev.category, 'to', newCategory);
         const optimistic: Product = { ...prev, category: newCategory };
         replaceProduct(optimistic);
 
         try {
-          await api.patch(`/products/${id}`, { category: newCategory });
+          console.log('Calling API PATCH /products/' + id, { category: newCategory });
+          const response = await api.patch(`/products/${id}`, { category: newCategory });
+          console.log('API response:', response.data);
+          
+          // Atualiza com os dados retornados da API
+          if (response.data) {
+            const updatedProduct = mapProductDTO(response.data);
+            console.log('Updated product from API:', updatedProduct);
+            replaceProduct(updatedProduct);
+          }
         } catch (e) {
+          console.error('Error moving product:', e);
           replaceProduct(prev); // rollback
           throw e;
         }
