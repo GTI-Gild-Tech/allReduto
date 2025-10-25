@@ -228,3 +228,90 @@ export function KanbanColumn({ title, category, products, onMove, onReorder, onE
     </div>
   );
 }
+
+// Novo componente para permitir arrastar categorias inteiras
+interface DraggableCategoryColumnProps extends KanbanColumnProps {
+  index: number;
+  onReorderCategory: (categoryName: string, newIndex: number) => void;
+}
+
+export function DraggableCategoryColumn({ 
+  title, 
+  category, 
+  products, 
+  index,
+  onMove, 
+  onReorder, 
+  onEdit, 
+  onDelete, 
+  onDeleteCategory, 
+  onEditCategory, 
+  canDeleteCategory,
+  onReorderCategory 
+}: DraggableCategoryColumnProps) {
+  const [{ isDragging }, dragCategory] = useDrag(() => ({
+    type: 'category',
+    item: { category, index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }), [category, index]);
+
+  const [{ isOverCategory }, dropCategory] = useDrop(() => ({
+    accept: 'category',
+    hover: (item: { category: string; index: number }, monitor) => {
+      if (!monitor.isOver({ shallow: true })) {
+        return;
+      }
+      
+      if (item.category === category) {
+        return;
+      }
+      
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      
+      if (dragIndex === hoverIndex) {
+        return;
+      }
+      
+      // Reordenar categorias
+      onReorderCategory(item.category, hoverIndex);
+      
+      // Atualizar o índice do item arrastado
+      item.index = hoverIndex;
+    },
+    collect: (monitor) => ({
+      isOverCategory: monitor.isOver(),
+    }),
+  }), [category, index, onReorderCategory]);
+
+  const ref = (node: HTMLDivElement | null) => {
+    dragCategory(dropCategory(node));
+  };
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-200 ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      } ${
+        isOverCategory ? 'ring-2 ring-[#C1A07B] ring-opacity-50 rounded-[16px]' : ''
+      }`}
+      style={{ cursor: 'grab' }}
+    >
+      <KanbanColumn
+        title={title}
+        category={category}
+        products={products}
+        onMove={onMove}
+        onReorder={onReorder}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onDeleteCategory={onDeleteCategory}
+        onEditCategory={onEditCategory}
+        canDeleteCategory={canDeleteCategory}
+      />
+    </div>
+  );
+}

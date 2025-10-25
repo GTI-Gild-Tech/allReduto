@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Cropper from "react-easy-crop";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { KanbanColumn, Product } from "./KanbanComponents";
+import { DraggableCategoryColumn, Product } from "./KanbanComponents";
 import { useProducts } from "../context/ProductsContext";
 import svgPaths from "../../imports/svg-gf3getow1k";
 import {
@@ -718,7 +718,8 @@ export function KanbanBoard() {
     reorderProducts,
     addCategory,
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    reorderCategories
   } = useProducts();
   
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -755,6 +756,23 @@ export function KanbanBoard() {
       reorderProducts(category, productId, newIndex).catch(err => {
         console.error('Error in handleReorderProducts:', err);
         alert('Erro ao reordenar produto: ' + (err.message || 'Erro desconhecido'));
+      });
+    }, 100);
+  };
+
+  const handleReorderCategories = (categoryName: string, newIndex: number) => {
+    console.log('KanbanBoard.handleReorderCategories:', { categoryName, newIndex });
+    
+    // Debounce: cancelar chamadas anteriores pendentes
+    if ((window as any).__reorderCategoryTimeout) {
+      clearTimeout((window as any).__reorderCategoryTimeout);
+    }
+    
+    // Aguardar 100ms antes de enviar para o backend (para agrupar múltiplas mudanças)
+    (window as any).__reorderCategoryTimeout = setTimeout(() => {
+      reorderCategories(categoryName, newIndex).catch(err => {
+        console.error('Error in handleReorderCategories:', err);
+        alert('Erro ao reordenar categoria: ' + (err.message || 'Erro desconhecido'));
       });
     }, 100);
   };
@@ -905,17 +923,18 @@ export function KanbanBoard() {
 
         {/* Kanban Columns */}
         <div className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto pt-1">
-          {categories.map((category) => {
+          {categories.map((category, index) => {
             const categoryProducts = products
               .filter(p => p.category === category)
               .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             const canDeleteCategory = categories.length > 1 && categoryProducts.length === 0;
             
             return (
-              <KanbanColumn
+              <DraggableCategoryColumn
                 key={category}
                 title={category}
                 category={category}
+                index={index}
                 products={categoryProducts}
                 onMove={handleMoveProduct}
                 onReorder={handleReorderProducts}
@@ -924,6 +943,7 @@ export function KanbanBoard() {
                 onDeleteCategory={canDeleteCategory ? handleDeleteCategory : undefined}
                 onEditCategory={handleEditCategory}
                 canDeleteCategory={canDeleteCategory}
+                onReorderCategory={handleReorderCategories}
               />
             );
           })}

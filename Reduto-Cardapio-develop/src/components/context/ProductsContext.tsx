@@ -95,6 +95,7 @@ type ProductsCtx = {
   addCategory: (name: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
+  reorderCategories: (categoryName: string, newIndex: number) => Promise<void>;
 };
 
 const ProductsContext = createContext<ProductsCtx | undefined>(undefined);
@@ -541,6 +542,62 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
     [categories, categoryByName, fetchData]
   );
 
+  const reorderCategoriesFn: (categoryName: string, newIndex: number) => Promise<void> =
+    useCallback(
+      async (categoryName, newIndex) => {
+        console.log('[reorderCategoriesFn] Reordering:', { categoryName, newIndex });
+        
+        // Snapshot do estado atual para rollback
+        const prevCategories = categories.slice();
+        
+        const categoryIndex = categories.indexOf(categoryName);
+        if (categoryIndex === -1) {
+          console.warn('[reorderCategoriesFn] Category not found');
+          return;
+        }
+        
+        // Se a posição não mudou, não fazer nada
+        if (categoryIndex === newIndex) {
+          console.log('[reorderCategoriesFn] No change in position');
+          return;
+        }
+        
+        // Reordenar localmente (otimista)
+        const updatedCategories = [...categories];
+        const [movedCategory] = updatedCategories.splice(categoryIndex, 1);
+        updatedCategories.splice(newIndex, 0, movedCategory);
+        
+        // Atualizar estado local IMEDIATAMENTE
+        setCategories(updatedCategories);
+        
+        try {
+          // resolve id pelo nome
+          let id = categoryByName[categoryName];
+          if (!id) {
+            await fetchData(); // tenta refrescar
+            id = categoryByName[categoryName];
+          }
+          if (!id) throw new Error('Categoria não encontrada para reordenação.');
+
+          // Enviar a nova ordem para o backend
+          const response = await api.patch(`/categories/${encodeURIComponent(id)}/reorder`, { 
+            newOrder: newIndex 
+          });
+          
+          console.log('[reorderCategoriesFn] Backend response:', response.data);
+          
+          // Re-fetch para garantir consistência com o backend
+          await fetchData();
+        } catch (e) {
+          console.error('[reorderCategoriesFn] Error:', e);
+          // Rollback para o snapshot
+          setCategories(prevCategories);
+          throw e;
+        }
+      },
+      [categories, categoryByName, fetchData]
+    );
+
   // ---------- Value memoizado ----------
   const value: ProductsCtx = useMemo(
     () => ({
@@ -560,6 +617,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       addCategory: addCategoryFn,
       updateCategory: updateCategoryFn,
       deleteCategory: deleteCategoryFn,
+      reorderCategories: reorderCategoriesFn,
     }),
     [
       products,
@@ -575,6 +633,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       addCategoryFn,
       updateCategoryFn,
       deleteCategoryFn,
+      reorderCategoriesFn,
     ]
   );
 

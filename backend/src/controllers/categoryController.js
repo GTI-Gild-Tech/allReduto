@@ -1,5 +1,7 @@
 const { Category } = require('../models');
 const { nanoid } = require('nanoid');
+const { Op } = require('sequelize');
+const sequelize = require('../models').sequelize;
 
 class categoryController {
   // Cria uma nova categoria
@@ -80,6 +82,75 @@ class categoryController {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: 'Erro ao deletar categoria.', error: error.message });
+    }
+  }
+
+  // Reordena uma categoria
+  async reorderCategory(req, res) {
+    try {
+      const { category } = req.params;
+      const { newOrder } = req.body;
+
+      if (typeof newOrder !== 'number') {
+        return res.status(400).json({ message: 'newOrder deve ser um número.' });
+      }
+
+      // Buscar a categoria que está sendo movida
+      const categoryToMove = await Category.findByPk(category);
+      if (!categoryToMove) {
+        return res.status(404).json({ message: 'Categoria não encontrada.' });
+      }
+
+      const oldOrder = categoryToMove.order || 0;
+
+      // Buscar todas as categorias ordenadas
+      const allCategories = await Category.findAll({
+        order: [['order', 'ASC']]
+      });
+
+      // Atualizar a ordem das categorias afetadas
+      if (newOrder > oldOrder) {
+        // Movendo para baixo: decrementar as categorias entre oldOrder e newOrder
+        await Category.update(
+          { order: sequelize.literal('`order` - 1') },
+          {
+            where: {
+              order: {
+                [Op.gt]: oldOrder,
+                [Op.lte]: newOrder
+              }
+            }
+          }
+        );
+      } else if (newOrder < oldOrder) {
+        // Movendo para cima: incrementar as categorias entre newOrder e oldOrder
+        await Category.update(
+          { order: sequelize.literal('`order` + 1') },
+          {
+            where: {
+              order: {
+                [Op.gte]: newOrder,
+                [Op.lt]: oldOrder
+              }
+            }
+          }
+        );
+      }
+
+      // Atualizar a ordem da categoria movida
+      await Category.update(
+        { order: newOrder },
+        { where: { category_id: category } }
+      );
+
+      const updatedCategory = await Category.findByPk(category);
+      return res.status(200).json({ 
+        message: 'Categoria reordenada com sucesso.', 
+        category: updatedCategory 
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: 'Erro ao reordenar categoria.', error: error.message });
     }
   }
 }
