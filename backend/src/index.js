@@ -1,31 +1,48 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { sequelize } = require('./models');
-const apiRoutes = require('./routes');
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+import modelsPkg from "./models/index.js";
+const { sequelize } = modelsPkg.default ?? modelsPkg;
+
+import apiRoutes from "./routes/index.js";
+
+// __dirname em ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(express.json({ limit: '20mb' }));
-// Middlewares básicos
+// Middlewares
+app.use(express.json({ limit: "20mb" }));
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// arquivos públicos
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// Arquivos públicos
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
-// healthcheck simples
-app.get('/api/ping', (_req, res) => res.json({ ok: true }));
+// Healthcheck simples
+app.get("/api/ping", (_req, res) => res.json({ ok: true }));
 
-// suas rotas principais
+// ===== DIAGNÓSTICOS (registados ANTES do router /api) =====
+app.get("/__hello", (_req, res) => res.json({ ok: true, msg: "hello" }));
 
-app.get('/api/ping', (_req, res) => res.json({ ok: true }));
+app.get("/api/__appstack", (_req, res) => {
+  const stack = app._router.stack.map((l) => ({
+    name: l.name,
+    path: l.route?.path || l.regexp?.toString(),
+    methods: l.route?.methods || null,
+  }));
+  res.json(stack);
+});
+// ==========================================================
 
-app.use('/api', apiRoutes);
+// Monta as rotas principais
+app.use("/api", apiRoutes);
 
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.APP_PORT || process.env.PORT || 3001);
 
 sequelize
   .sync()
@@ -35,6 +52,6 @@ sequelize
     });
   })
   .catch((err) => {
-    console.error('❌ Erro ao sincronizar o Sequelize:', err);
+    console.error("❌ Erro ao sincronizar o Sequelize:", err);
     process.exit(1);
   });

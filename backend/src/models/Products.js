@@ -22,12 +22,14 @@ module.exports = (sequelize) => {
     type: DataTypes.STRING,
     allowNull: true
     },
-    order: {
+        order: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       defaultValue: 0,
+      field: 'reorder',   // 👈 diz pro Sequelize que no banco o nome é "reorder"
       comment: 'Ordem do produto dentro da categoria'
     },
+
   },
    {
     sequelize,

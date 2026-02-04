@@ -1,7 +1,7 @@
 {
-  "development": {
-    "username": "root", 
-    "password": "123456", 
+   "development": {
+    "username": "nodeuser",
+    "password": "@#@#1Ax00012",
     "database": "cafeteria",
     "host": "127.0.0.1",
     "dialect": "mysql"

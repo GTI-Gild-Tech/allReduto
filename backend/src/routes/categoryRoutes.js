@@ -6,8 +6,8 @@ const { Op } = require("sequelize");
 router.get("/", async (_req, res) => {
   try {
     const rows = await Category.findAll({
-      order: [["order", "ASC"], ["created_at", "DESC"]],
-      attributes: ["category_id", "name", "slug", "order", "created_at", "updated_at"],
+      order: [["reorder", "ASC"], ["created_at", "DESC"]],
+      attributes: ["category_id", "name", "slug", "reorder", "created_at", "updated_at"],
     });
     res.json(rows);
   } catch (err) {
@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
 
     // Buscar o maior valor de order existente e adicionar 1
     const maxOrderResult = await Category.findOne({
-      attributes: [[Category.sequelize.fn('MAX', Category.sequelize.col('order')), 'maxOrder']],
+      attributes: [[Category.sequelize.fn('MAX', Category.sequelize.col('reorder')), 'maxOrder']],
       raw: true
     });
     const nextOrder = (maxOrderResult?.maxOrder ?? -1) + 1;
@@ -90,7 +90,7 @@ router.delete("/:id", async (req, res) => {
 
     // Reajustar os índices das categorias subsequentes (decrementar)
     await Category.update(
-      { order: Category.sequelize.literal('`order` - 1') },
+      { order: Category.sequelize.literal('`reorder` - 1') },
       {
         where: {
           order: {
@@ -146,7 +146,7 @@ router.patch("/:id/reorder", async (req, res) => {
       // Movendo para baixo: decrementar as categorias entre oldOrder e newOrder
       console.log('[REORDER] Movendo para baixo: decrementando categorias entre', oldOrder + 1, 'e', newOrder);
       await Category.update(
-        { order: Category.sequelize.literal('`order` - 1') },
+        { order: Category.sequelize.literal('`reorder` - 1') },
         {
           where: {
             order: {
@@ -160,7 +160,7 @@ router.patch("/:id/reorder", async (req, res) => {
       // Movendo para cima: incrementar as categorias entre newOrder e oldOrder
       console.log('[REORDER] Movendo para cima: incrementando categorias entre', newOrder, 'e', oldOrder - 1);
       await Category.update(
-        { order: Category.sequelize.literal('`order` + 1') },
+        { order: Category.sequelize.literal('`reorder` + 1') },
         {
           where: {
             order: {
@@ -183,8 +183,8 @@ router.patch("/:id/reorder", async (req, res) => {
     
     // Log do estado final
     const allCategories = await Category.findAll({
-      order: [['order', 'ASC']],
-      attributes: ['category_id', 'name', 'order']
+      order: [['reorder', 'ASC']],
+      attributes: ['category_id', 'name', 'reorder']
     });
     console.log('[REORDER] Estado final das categorias:');
     console.table(allCategories.map(c => ({ id: c.category_id, name: c.name, order: c.order })));
@@ -200,3 +200,4 @@ router.patch("/:id/reorder", async (req, res) => {
 });
 
 module.exports = router;
+

@@ -1,0 +1,97 @@
+require('dotenv').config();
+const { Sequelize, DataTypes } = require('sequelize');
+
+// Lê configs do .env
+const DB_HOST = process.env.DB_HOST    || 'localhost';
+const DB_USER = process.env.DB_USER    || 'root';
+const DB_PASS = process.env.DB_PASS    || '';
+const DB_NAME = process.env.DB_NAME    || 'cafeteria';
+const DB_DIALECT = process.env.DB_DIALECT || 'mysql';
+
+console.log('[db] config =>', { host: DB_HOST, user: DB_USER, db: DB_NAME, dialect: DB_DIALECT });
+
+const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+  host: DB_HOST,
+  dialect: DB_DIALECT,
+  logging: false,
+});
+
+// IMPORT DAS MODELS (ajustado pelos nomes reais dos arquivos)
+const Product   = require('./Products')(sequelize, DataTypes);
+const Category  = require('./Category')(sequelize, DataTypes);
+const Order     = require('./Order')(sequelize, DataTypes);
+const OrderItem = require('./orderItem')(sequelize, DataTypes);
+const Customer  = require('./Customer')(sequelize, DataTypes);
+const Cart      = require('./Cart')(sequelize, DataTypes);
+const User      = require('./user')(sequelize, DataTypes);
+const CartItem  = require('./CartItem')(sequelize, DataTypes);
+
+// ==========================
+// ASSOCIAÇÕES ENTRE MODELS
+// ==========================
+
+// Order ↔ Customer
+Order.belongsTo(Customer, {
+  as: 'customer',
+  foreignKey: 'customer_id',
+});
+Customer.hasMany(Order, {
+  as: 'orders',
+  foreignKey: 'customer_id',
+});
+
+// Order ↔ Cart (se você usar carrinho atrelado ao pedido)
+Order.belongsTo(Cart, {
+  as: 'cart',
+  foreignKey: 'cart_id',
+});
+Cart.hasMany(Order, {
+  as: 'orders',
+  foreignKey: 'cart_id',
+});
+
+// Order ↔ OrderItem (itens do pedido)
+Order.hasMany(OrderItem, {
+  as: 'items',
+  foreignKey: 'order_id',
+});
+OrderItem.belongsTo(Order, {
+  as: 'order',
+  foreignKey: 'order_id',
+});
+
+// Product ↔ OrderItem (produto em cada item do pedido)
+Product.hasMany(OrderItem, {
+  as: 'orderItems',
+  foreignKey: 'product_id',
+});
+OrderItem.belongsTo(Product, {
+  as: 'product',
+  foreignKey: 'product_id',
+});
+
+// Cart ↔ CartItem (itens do carrinho)
+Cart.hasMany(CartItem, {
+  as: 'items',
+  foreignKey: 'cart_id',
+});
+CartItem.belongsTo(Cart, {
+  as: 'cart',
+  foreignKey: 'cart_id',
+});
+
+// (se quiser, poderia ter Customer ↔ Cart também, mas não é obrigatório aqui)
+
+// Exporta tudo
+module.exports = {
+  sequelize,
+  Sequelize,
+  Product,
+  Category,
+  Order,
+  OrderItem,
+  Customer,
+  Cart,
+  User,
+  CartItem,
+};

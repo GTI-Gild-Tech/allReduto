@@ -171,6 +171,104 @@ const reorderProduct = async (req, res) => {
       });
     }
 
+const reorderProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { category, newOrder } = req.body;
+
+    console.log('[reorderProduct] raw body =', req.body);
+
+    // garante que newOrder seja número
+    newOrder = Number(newOrder);
+    if (!Number.isFinite(newOrder)) {
+      return res.status(400).json({
+        message: 'Campo "newOrder" é obrigatório e deve ser numérico.',
+      });
+    }
+
+    // Buscar o produto
+    const product = await Product.findByPk(id);
+    if (!product) {
+      console.log('[reorderProduct] produto não encontrado, id =', id);
+      return res.status(404).json({ message: 'Produto não encontrado.' });
+    }
+
+    // Se categoria não vier no body, usa a do próprio produto
+    if (category == null || category === '') {
+      category = product.category;
+      console.log('[reorderProduct] category não veio no body, usando do produto:', category);
+    }
+
+    if (category == null || category === '') {
+      return res.status(400).json({
+        message: 'Campo "category" é obrigatório e não foi possível inferir do produto.',
+      });
+    }
+
+    console.log('[reorderProduct] id:', id, 'category:', category, 'newOrder:', newOrder);
+
+    // Buscar todos os produtos da categoria ordenados
+    const categoryProducts = await Product.findAll({
+      where: { category },
+      order: [['order', 'ASC'], ['product_id', 'ASC']],
+    });
+
+    console.log('[reorderProduct] Found', categoryProducts.length, 'products in category');
+
+    // Encontrar o índice atual do produto
+    const currentIndex = categoryProducts.findIndex(
+      (p) => Number(p.product_id) === Number(id)
+    );
+
+    console.log('[reorderProduct] currentIndex =', currentIndex);
+
+    if (currentIndex === -1) {
+      return res.status(404).json({
+        message: 'Produto não encontrado na lista da categoria.',
+        debug: { id, category },
+      });
+    }
+
+    // Se a posição não mudou, retornar sem fazer nada
+    if (currentIndex === newOrder) {
+      console.log('[reorderProduct] No change in position');
+      return res.status(200).json(product);
+    }
+
+    // Remover o produto da posição atual
+    const [movedProduct] = categoryProducts.splice(currentIndex, 1);
+
+    // Garante que newOrder esteja no intervalo do array
+    const safeIndex = Math.max(0, Math.min(newOrder, categoryProducts.length));
+    console.log('[reorderProduct] moving from', currentIndex, 'to', safeIndex);
+
+    // Inserir na nova posição
+    categoryProducts.splice(safeIndex, 0, movedProduct);
+
+    // Atualizar a ordem de todos os produtos da categoria
+    const updates = categoryProducts.map((p, index) =>
+      Product.update({ order: index }, { where: { product_id: p.product_id } })
+    );
+
+    await Promise.all(updates);
+
+    console.log('[reorderProduct] Updated', updates.length, 'products');
+
+    // Retornar o produto atualizado
+    const updatedProduct = await Product.findByPk(id);
+    return res.status(200).json(updatedProduct);
+  } catch (err) {
+    console.error(
+      'PATCH /api/products/:id/reorder error:',
+      err?.original?.sqlMessage || err
+    );
+    return res.status(500).json({
+      message: 'Erro ao reordenar produto.',
+      error: err?.original?.sqlMessage || err?.message || String(err),
+    });
+  }
+};
+
     // Buscar o produto
     const product = await Product.findByPk(id);
     if (!product) {

@@ -1,0 +1,37 @@
+const express = require('express');
+
+router.patch('/__test', (req, res) => {
+  return res.json({ ok: true, where: '/api/products/__test (PATCH)' });
+});
+
+router.get('/__stack', (req, res) => {
+  const stack = router.stack
+    .filter(r => r.route)
+    .map(r => ({ methods: r.route.methods, path: r.route.path }));
+  return res.json(stack);
+});
+
+const router = express.Router();
+const upload = require('../config/multer');
+const productController = require('../controllers/productController');
+
+// logger simples pra depurar conteúdo da requisição
+const reqLogger = (req, _res, next) => {
+  console.log('[routes] CT:', req.headers['content-type']);
+  next();
+};
+
+router.get('/', productController.getAllProducts);
+router.get('/:id', productController.getProductById);
+
+// Rota específica para reordenação (deve vir ANTES das rotas genéricas)
+router.patch('/:id/reorder', productController.reorderProduct);
+
+// use o NOME DO CAMPO "file"
+router.post('/', reqLogger, upload.single('file'), productController.createProduct);
+router.put('/:id', reqLogger, upload.single('file'), productController.updateProduct);
+router.patch('/:id', reqLogger, upload.single('file'), productController.updateProduct);
+
+router.delete('/:id', productController.deleteProduct);
+
+module.exports = router;
