@@ -139,6 +139,9 @@ const mapProductDTO = (dto: any): Product => {
     description: dto.description,
     sizes,
     imageUrl: toPublicUrl(dto.imageUrl),
+
+    is_visible: dto.is_visible ?? dto.isVisible ?? true,
+    
     order: dto.order ?? 0,
   };
 };
@@ -191,7 +194,9 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setError(null);
     try {
       const [prodRes, catRes] = await Promise.all([
-        api.get('/products'),
+        api.get('/products/admin/products')
+,
+
         api.get('/categories'),
       ]);
 
@@ -262,6 +267,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('sizes', JSON.stringify(sizesNorm));
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
+          fd.append('is_visible', String((p as any).is_visible ?? true));
           fd.append('file', imageFile);
 
           const { data } = await api.post('/products', fd, { headers: {} });
@@ -276,6 +282,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             sizes: sizesNorm,
             stock_qty: (p as any).stock_qty ?? 0,
             active: (p as any).active ?? 1,
+            is_visible: (p as any).is_visible ?? true,
             imageUrl: p.imageUrl ?? null,
           };
           const { data } = await api.post('/products', payload);
@@ -314,6 +321,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('sizes', JSON.stringify(sizesNorm));
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
+          fd.append('is_visible', String((p as any).is_visible ?? true));
           fd.append('file', imageFile);
 
           const { data } = await api.put(`/products/${p.id}`, fd, { headers: {} });
@@ -328,6 +336,8 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             sizes: sizesNorm,
             stock_qty: (p as any).stock_qty ?? 0,
             active: (p as any).active ?? 1,
+            is_visible: (p as any).is_visible ?? true,
+
             imageUrl: p.imageUrl ?? null,
           };
           const { data } = await api.put(`/products/${p.id}`, payload);

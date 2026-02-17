@@ -142,6 +142,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
     customOptions: [] as CustomOption[],
     uniquePrice: '',
     imageUrl: '' as string,
+    is_visible: true,
   });
 
   useEffect(() => {
@@ -156,6 +157,8 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       customOptions: [],
       uniquePrice: '',
       imageUrl: product.imageUrl ?? '',
+      is_visible: (product as any).is_visible ?? true,
+
     });
   } else {
     setFormData({
@@ -168,6 +171,8 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       customOptions: [],
       uniquePrice: '',
       imageUrl: '',
+      is_visible: true,
+
     });
   }
 }, [product, isOpen, categories]);
@@ -371,6 +376,31 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                 </select>
               </div>
             </div>
+
+            {/* Visibilidade no cardápio do cliente */}
+<div className="relative shrink-0 w-full">
+  <div
+    className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]"
+    style={{ fontVariationSettings: "'wdth' 100" }}
+  >
+    <p className="leading-[normal] whitespace-pre">Mostrar no cardápio do cliente</p>
+  </div>
+
+  <label className="flex items-center gap-3 text-[14px] font-['Open_Sans:Regular',_sans-serif]">
+    <input
+      type="checkbox"
+      checked={!!formData.is_visible}
+      onChange={(e) =>
+        setFormData((prev) => ({ ...prev, is_visible: e.target.checked }))
+      }
+      className="h-4 w-4 accent-[#0f4c50]"
+    />
+    <span className="text-[#0f4c50]">
+      {formData.is_visible ? "Visível" : "Oculto"}
+    </span>
+  </label>
+</div>
+
 
             {/* Descrição */}
             <div className="relative shrink-0 w-full">

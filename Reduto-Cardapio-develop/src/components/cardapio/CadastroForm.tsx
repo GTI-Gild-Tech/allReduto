@@ -8,7 +8,13 @@ import {
 
 function CadastroLeftColumn({
   onSelectFile,
-}: { onSelectFile?: (file: File | null) => void }) {
+  isVisible,
+  onToggleVisible,
+}: {
+  onSelectFile?: (file: File | null) => void;
+  isVisible: boolean;
+  onToggleVisible: (next: boolean) => void;
+}) {
   return (
     <div className="h-[322px] relative shrink-0 w-[350px]">
       <div className="absolute h-[59.8px] left-0 top-0 w-[350px]">
@@ -24,8 +30,21 @@ function CadastroLeftColumn({
         <FormField label="Descrição" placeholder="" />
       </div>
 
-      {/* NOVO: campo de foto */}
-      <div className="absolute left-0 top-[266px] w-[350px]">
+      {/* NOVO: mostrar/ocultar no cardápio do cliente */}
+      <div className="absolute left-0 top-[248px] w-[350px]">
+        <div className="text-[13px] mb-1">Mostrar no cardápio do cliente</div>
+        <label className="flex items-center gap-2 text-[13px] select-none">
+          <input
+            type="checkbox"
+            checked={isVisible}
+            onChange={(e) => onToggleVisible(e.target.checked)}
+          />
+          <span>{isVisible ? "Visível" : "Oculto"}</span>
+        </label>
+      </div>
+
+      {/* campo de foto */}
+      <div className="absolute left-0 top-[286px] w-[350px]">
         <div className="text-[13px] mb-1">Foto</div>
         <input
           type="file"
@@ -76,17 +95,27 @@ function CadastroRightColumn() {
 
 export function CadastroFormFields({
   onSelectFile,
-}: { onSelectFile?: (file: File | null) => void }) {
+  isVisible,
+  onToggleVisible,
+}: {
+  onSelectFile?: (file: File | null) => void;
+  isVisible: boolean;
+  onToggleVisible: (next: boolean) => void;
+}) {
   return (
     <div className="content-stretch flex gap-2 items-start justify-start relative shrink-0">
-      <CadastroLeftColumn onSelectFile={onSelectFile} />
+      <CadastroLeftColumn
+        onSelectFile={onSelectFile}
+        isVisible={isVisible}
+        onToggleVisible={onToggleVisible}
+      />
       <CadastroRightColumn />
     </div>
   );
 }
 
 interface CadastroButtonProps {
-  onFinalizarCadastro?: (file?: File) => void;
+  onFinalizarCadastro?: (file?: File, is_visible?: boolean) => void;
 }
 export function CadastroButton({ onFinalizarCadastro }: CadastroButtonProps) {
   return (
@@ -106,15 +135,24 @@ export function CadastroButton({ onFinalizarCadastro }: CadastroButtonProps) {
 }
 
 interface CadastroContainerProps {
-  onFinalizarCadastro?: (file?: File) => void;
+  onFinalizarCadastro?: (file?: File, is_visible?: boolean) => void;
 }
 export function CadastroContainer({ onFinalizarCadastro }: CadastroContainerProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isVisible, setIsVisible] = useState<boolean>(true); // default: visível
 
   return (
     <div className="bg-[#f9f8f5] content-stretch flex flex-col gap-2.5 h-[464px] items-center justify-center relative shrink-0 w-[896px]">
-      <CadastroFormFields onSelectFile={setImageFile} />
-      <CadastroButton onFinalizarCadastro={() => onFinalizarCadastro?.(imageFile ?? undefined)} />
+      <CadastroFormFields
+        onSelectFile={setImageFile}
+        isVisible={isVisible}
+        onToggleVisible={setIsVisible}
+      />
+      <CadastroButton
+        onFinalizarCadastro={() =>
+          onFinalizarCadastro?.(imageFile ?? undefined, isVisible)
+        }
+      />
     </div>
   );
 }
