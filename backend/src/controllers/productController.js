@@ -1,5 +1,4 @@
 // src/controllers/productController.js
-// src/controllers/productController.js
 const { Product } = require('../models');
 
 // ---------- helpers ----------
@@ -12,6 +11,18 @@ const parseSizes = (val) => {
   return [];
 };
 
+// aceita 1/0, "1"/"0", true/false, "true"/"false"
+const parseBool01 = (v, defaultValue = 1) => {
+  if (v == null || v === '') return defaultValue;
+  if (typeof v === 'boolean') return v ? 1 : 0;
+  const s = String(v).trim().toLowerCase();
+  if (s === '1' || s === 'true' || s === 'yes' || s === 'on') return 1;
+  if (s === '0' || s === 'false' || s === 'no' || s === 'off') return 0;
+  const n = Number(s);
+  if (Number.isFinite(n)) return n ? 1 : 0;
+  return defaultValue;
+};
+
 // somente aceita caminhos salvos localmente pela API (/uploads/...)
 const isValidStoredPath = (u) =>
   typeof u === 'string' &&
@@ -19,14 +30,17 @@ const isValidStoredPath = (u) =>
   (u.startsWith('/uploads/') || u.startsWith('uploads/'));
 
 // ---------- CRUD ----------
+
+// ✅ Se este GET é o que o CLIENTE usa, filtre aqui:
 const getAllProducts = async (_req, res) => {
   try {
-    const products = await Product.findAll({ 
+    const products = await Product.findAll({
+      where: { is_visible: 1 }, // ✅ só visíveis
       order: [
         ['category', 'ASC'],
         ['order', 'ASC'],
         ['product_id', 'DESC']
-      ] 
+      ]
     });
     return res.status(200).json(products);
   } catch (err) {
@@ -34,6 +48,23 @@ const getAllProducts = async (_req, res) => {
     return res
       .status(500)
       .json({ message: 'Erro ao listar produtos.', error: err?.message });
+  }
+};
+
+// ✅ (opcional) rota ADMIN sem filtro — use no painel se precisar
+const getAllProductsAdmin = async (_req, res) => {
+  try {
+    const products = await Product.findAll({
+      order: [
+        ['category', 'ASC'],
+        ['order', 'ASC'],
+        ['product_id', 'DESC']
+      ]
+    });
+    return res.status(200).json(products);
+  } catch (err) {
+    console.error('GET /api/admin/products error:', err?.original?.sqlMessage || err);
+    return res.status(500).json({ message: 'Erro ao listar produtos (admin).', error: err?.message });
   }
 };
 
@@ -52,31 +83,28 @@ const getProductById = async (req, res) => {
 };
 
 const createProduct = async (req, res) => {
-
   console.log('[createProduct] CT:', req.headers['content-type']);
-console.log('[createProduct] has file?', !!req.file, req.file && {
-  fieldname: req.file.fieldname,
-  originalname: req.file.originalname,
-  filename: req.file.filename,
-  size: req.file.size,
-});
-console.log('[createProduct] body keys:', Object.keys(req.body));
+  console.log('[createProduct] has file?', !!req.file, req.file && {
+    fieldname: req.file.fieldname,
+    originalname: req.file.originalname,
+    filename: req.file.filename,
+    size: req.file.size,
+  });
+  console.log('[createProduct] body keys:', Object.keys(req.body));
+
   try {
     const { body, file } = req;
 
-    // campos obrigatórios no seu schema
     if (!body?.name)     return res.status(400).json({ message: "Campo 'name' é obrigatório." });
     if (!body?.category) return res.status(400).json({ message: "Campo 'category' é obrigatório." });
 
-    // uniquePrice é NOT NULL na tabela -> garanta um valor
     const uniquePrice = (body.uniquePrice ?? '').toString().trim() || '0.00';
 
-    // aceita somente caminho salvo localmente (/uploads/...) ou nulo
     const imageUrl = file
       ? `/uploads/${file.filename}`
       : (isValidStoredPath(body.imageUrl) ? body.imageUrl : null);
 
-    // Determinar a ordem: se não especificada, usar a próxima disponível na categoria
+    // ordem
     let order = body.order != null ? Number(body.order) : null;
     if (order === null) {
       const maxOrderProduct = await Product.findOne({
@@ -85,6 +113,9 @@ console.log('[createProduct] body keys:', Object.keys(req.body));
       });
       order = maxOrderProduct ? (maxOrderProduct.order || 0) + 1 : 0;
     }
+
+    // ✅ novo: is_visible (default 1)
+    const is_visible = parseBool01(body.is_visible, 1);
 
     const payload = {
       name: body.name,
@@ -96,6 +127,9 @@ console.log('[createProduct] body keys:', Object.keys(req.body));
       active: body.active == null ? 1 : Number(body.active),
       imageUrl,
       order,
+
+      // ✅
+      is_visible,
     };
 
     const created = await Product.create(payload);
@@ -123,7 +157,10 @@ const updateProduct = async (req, res) => {
       ...(body.stock_qty != null   ? { stock_qty: Number(body.stock_qty) } : {}),
       ...(body.active != null      ? { active: Number(body.active) } : {}),
       ...(body.order != null       ? { order: Number(body.order) } : {}),
-      // se vier arquivo, troca; se não, só aceita caminho curto de /uploads
+
+      // ✅ novo: is_visible
+      ...(body.is_visible != null  ? { is_visible: parseBool01(body.is_visible, 1) } : {}),
+
       ...(file
         ? { imageUrl: `/uploads/${file.filename}` }
         : (isValidStoredPath(body.imageUrl) ? { imageUrl: body.imageUrl } : {})),
@@ -158,19 +195,7 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-const reorderProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { category, newOrder } = req.body;
-
-    console.log('[reorderProduct] id:', id, 'category:', category, 'newOrder:', newOrder);
-
-    if (category == null || newOrder == null) {
-      return res.status(400).json({ 
-        message: 'Campos "category" e "newOrder" são obrigatórios.' 
-      });
-    }
-
+// ✅ Corrigido: UM reorderProduct só (sem duplicação)
 const reorderProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -178,7 +203,6 @@ const reorderProduct = async (req, res) => {
 
     console.log('[reorderProduct] raw body =', req.body);
 
-    // garante que newOrder seja número
     newOrder = Number(newOrder);
     if (!Number.isFinite(newOrder)) {
       return res.status(400).json({
@@ -186,41 +210,27 @@ const reorderProduct = async (req, res) => {
       });
     }
 
-    // Buscar o produto
     const product = await Product.findByPk(id);
     if (!product) {
       console.log('[reorderProduct] produto não encontrado, id =', id);
       return res.status(404).json({ message: 'Produto não encontrado.' });
     }
 
-    // Se categoria não vier no body, usa a do próprio produto
-    if (category == null || category === '') {
-      category = product.category;
-      console.log('[reorderProduct] category não veio no body, usando do produto:', category);
-    }
-
+    if (category == null || category === '') category = product.category;
     if (category == null || category === '') {
       return res.status(400).json({
         message: 'Campo "category" é obrigatório e não foi possível inferir do produto.',
       });
     }
 
-    console.log('[reorderProduct] id:', id, 'category:', category, 'newOrder:', newOrder);
-
-    // Buscar todos os produtos da categoria ordenados
     const categoryProducts = await Product.findAll({
       where: { category },
       order: [['order', 'ASC'], ['product_id', 'ASC']],
     });
 
-    console.log('[reorderProduct] Found', categoryProducts.length, 'products in category');
-
-    // Encontrar o índice atual do produto
     const currentIndex = categoryProducts.findIndex(
       (p) => Number(p.product_id) === Number(id)
     );
-
-    console.log('[reorderProduct] currentIndex =', currentIndex);
 
     if (currentIndex === -1) {
       return res.status(404).json({
@@ -229,92 +239,20 @@ const reorderProduct = async (req, res) => {
       });
     }
 
-    // Se a posição não mudou, retornar sem fazer nada
     if (currentIndex === newOrder) {
-      console.log('[reorderProduct] No change in position');
       return res.status(200).json(product);
     }
 
-    // Remover o produto da posição atual
     const [movedProduct] = categoryProducts.splice(currentIndex, 1);
-
-    // Garante que newOrder esteja no intervalo do array
     const safeIndex = Math.max(0, Math.min(newOrder, categoryProducts.length));
-    console.log('[reorderProduct] moving from', currentIndex, 'to', safeIndex);
-
-    // Inserir na nova posição
     categoryProducts.splice(safeIndex, 0, movedProduct);
 
-    // Atualizar a ordem de todos os produtos da categoria
-    const updates = categoryProducts.map((p, index) =>
-      Product.update({ order: index }, { where: { product_id: p.product_id } })
+    await Promise.all(
+      categoryProducts.map((p, index) =>
+        Product.update({ order: index }, { where: { product_id: p.product_id } })
+      )
     );
 
-    await Promise.all(updates);
-
-    console.log('[reorderProduct] Updated', updates.length, 'products');
-
-    // Retornar o produto atualizado
-    const updatedProduct = await Product.findByPk(id);
-    return res.status(200).json(updatedProduct);
-  } catch (err) {
-    console.error(
-      'PATCH /api/products/:id/reorder error:',
-      err?.original?.sqlMessage || err
-    );
-    return res.status(500).json({
-      message: 'Erro ao reordenar produto.',
-      error: err?.original?.sqlMessage || err?.message || String(err),
-    });
-  }
-};
-
-    // Buscar o produto
-    const product = await Product.findByPk(id);
-    if (!product) {
-      return res.status(404).json({ message: 'Produto não encontrado.' });
-    }
-
-    // Buscar todos os produtos da categoria ordenados
-    const categoryProducts = await Product.findAll({
-      where: { category },
-      order: [['order', 'ASC'], ['product_id', 'ASC']]
-    });
-
-    console.log('[reorderProduct] Found', categoryProducts.length, 'products in category');
-
-    // Encontrar o índice atual do produto
-    const currentIndex = categoryProducts.findIndex(p => p.product_id === parseInt(id));
-    
-    if (currentIndex === -1) {
-      return res.status(404).json({ message: 'Produto não encontrado na categoria.' });
-    }
-
-    // Se a posição não mudou, retornar sem fazer nada
-    if (currentIndex === newOrder) {
-      console.log('[reorderProduct] No change in position');
-      return res.status(200).json(product);
-    }
-
-    // Remover o produto da posição atual
-    const [movedProduct] = categoryProducts.splice(currentIndex, 1);
-    
-    // Inserir na nova posição
-    categoryProducts.splice(newOrder, 0, movedProduct);
-
-    // Atualizar a ordem de todos os produtos da categoria em uma transação
-    const updates = categoryProducts.map((p, index) => {
-      return Product.update(
-        { order: index },
-        { where: { product_id: p.product_id } }
-      );
-    });
-
-    await Promise.all(updates);
-
-    console.log('[reorderProduct] Updated', updates.length, 'products');
-
-    // Retornar o produto atualizado
     const updatedProduct = await Product.findByPk(id);
     return res.status(200).json(updatedProduct);
   } catch (err) {
@@ -328,6 +266,7 @@ const reorderProduct = async (req, res) => {
 
 module.exports = {
   getAllProducts,
+  getAllProductsAdmin, // ✅ opcional (se você criar rota admin)
   getProductById,
   createProduct,
   updateProduct,

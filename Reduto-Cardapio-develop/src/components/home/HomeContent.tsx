@@ -120,18 +120,22 @@ function MenuCategory({ title, products }: MenuCategoryProps) {
 
 export function HomeContent() {
   const { products, categories } = useProducts();
+
+  const visibleProducts = products.filter((p) => p.is_visible !== false);
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
 
   // Agrupar produtos por categoria
   const groupedProducts = categories.reduce((acc, category) => {
-    acc[category] = products.filter((p) => p.category === category);
+    acc[category] = visibleProducts.filter((p) => p.category === category);
+
     return acc;
   }, {} as Record<string, Product[]>);
 
   const filteredProducts =
-    selectedCategory === "todos"
-      ? products
-      : products.filter((p) => p.category === selectedCategory);
+  selectedCategory === "todos"
+    ? visibleProducts
+    : visibleProducts.filter((p) => p.category === selectedCategory);
+
 
   const handlePrint = () => window.print();
 

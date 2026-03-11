@@ -18,6 +18,11 @@ module.exports = (sequelize) => {
     active: DataTypes.BOOLEAN,
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
+    is_visible: {
+  type: DataTypes.BOOLEAN,
+  defaultValue: true,
+},
+
     imageUrl: {
     type: DataTypes.STRING,
     allowNull: true

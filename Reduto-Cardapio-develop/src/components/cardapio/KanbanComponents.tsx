@@ -11,6 +11,7 @@ export interface Product {
   description?: string;
   sizes: { size: string; price: number | string }[];
   imageUrl?: string;     // ← nova: imagem principal (data URL por enquanto)
+  is_visible?: boolean;
   order?: number;        // ← ordem do produto dentro da categoria
 }
 
