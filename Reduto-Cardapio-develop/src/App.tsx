@@ -7,6 +7,7 @@ import { CartProvider } from "./components/context/CartContext";
 import { OrdersProvider } from "./components/context/OrdersContext";
 
 import { AuthProvider, useAuth } from "./components/auth/AuthContext";
+import { FidelidadeProvider } from "./components/context/FidelidadeContext";
 import { Login } from "./components/auth/Login"; // <- named export (combina com seu arquivo)
 
 import { PublicSite } from "./components/public_site/PublicSite";
@@ -56,7 +57,9 @@ export default function App() {
       <ProductsProvider>
         <CartProvider>
           <OrdersProvider>
-            <AppInner />
+            <FidelidadeProvider>
+              <AppInner />
+            </FidelidadeProvider>
           </OrdersProvider>
         </CartProvider>
       </ProductsProvider>
