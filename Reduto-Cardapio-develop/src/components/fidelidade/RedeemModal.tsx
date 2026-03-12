@@ -15,6 +15,7 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
   const { getCustomerById, redeemPoints } = useFidelidade();
   const customer = getCustomerById(customerId);
   const [points, setPoints] = useState("");
+  const [observations, setObservations] = useState("");
 
   const handleSubmit = () => {
     const pointsValue = parseInt(points);
@@ -32,11 +33,13 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
     redeemPoints(customerId, pointsValue);
     toast.success(`${pointsValue} pontos resgatados com sucesso!`);
     setPoints("");
+    setObservations("");
     onClose();
   };
 
   const handleCancel = () => {
     setPoints("");
+    setObservations("");
     onClose();
   };
 
@@ -85,6 +88,19 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
                 value={points}
                 onChange={(e) => setPoints(e.target.value)}
                 className="w-full bg-transparent px-4 py-3 outline-none text-[#333] placeholder-[#bbb] rounded-lg"
+              />
+            </div>
+
+            <div className="relative rounded-lg border border-[#c0bab4] bg-[#faf8f5]">
+              <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
+                Observações
+              </span>
+              <textarea
+                placeholder="Ex: Desconto aplicado no café da manhã"
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                rows={3}
+                className="w-full bg-transparent px-4 py-3 outline-none text-[#333] placeholder-[#bbb] rounded-lg resize-none"
               />
             </div>
 
