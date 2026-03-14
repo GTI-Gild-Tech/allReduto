@@ -3,6 +3,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   ReactNode,
@@ -197,6 +198,10 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+  refresh();
+}, [refresh]);
 
   const createOrderFromCart = useCallback(
     async (params: CreateFromCartParams): Promise<OrderUI> => {

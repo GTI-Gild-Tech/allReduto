@@ -12,6 +12,8 @@ interface NewRecordModalProps {
   customerId?: string;
 }
 
+
+
 function calcPoints(total: number) {
   return Math.round(total);
 }
@@ -20,6 +22,9 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
   const { customers, getCustomerById, addPoints } = useFidelidade();
   const { orders } = useOrders();
 
+
+console.log("PEDIDOS NO MODAL:", orders);
+  
   const normalizeOrderInput = (value: string) => {
     const trimmed = value.trimStart();
     if (!trimmed) return "";
