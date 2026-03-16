@@ -72,7 +72,7 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
       <div className="box-border content-stretch flex flex-col gap-0 items-start justify-start overflow-hidden relative shrink-0 w-full rounded-sm">
         {/* Table Header */}
         <div
-          className="box-border content-stretch flex flex-row gap-0 items-stretch justify-start overflow-hidden relative shrink-0 w-full bg-[#C1A07B]"
+          className="box-border content-stretch flex flex-row gap-0 items-stretch justify-start overflow-hidden relative shrink-0 w-full rounded-t-lg bg-[#C1A07B]"
         >
           {/* Nome */}
           <div className="w-[200px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 relative shrink-0">
@@ -107,7 +107,7 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
           <div
             key={customer.id}
             className={`box-border content-stretch flex flex-row gap-0 items-center justify-start overflow-hidden relative shrink-0 w-full ${
-              index % 2 === 0 ? "bg-white" : "bg-[#f5f0ea]"
+              index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
             }`}
           >
             {/* Nome */}

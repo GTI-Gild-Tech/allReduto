@@ -14,7 +14,7 @@ export type HistoryRecord = {
   description: string;
   date: string;
   time?: string;
-  type: "add" | "redeem";
+  type: "add" | "redeem" | "register";
   points: number;
   notes?: string | null;
   externalOrderId?: string | null;
@@ -139,14 +139,26 @@ function buildCustomers(
   }
 
   return rawCustomers
-    .map((customer) => ({
-      id: customer.id,
-      name: customer.name,
-      phone: formatPhoneBR(customer.phone),
-      email: customer.email,
-      points: pointsByCustomer.get(customer.id) ?? 0,
-      history: historyByCustomer.get(customer.id) ?? [],
-    }))
+    .map((customer) => {
+      const { date, time } = formatDateTimeBR(customer.created_at);
+      const registerRecord: HistoryRecord = {
+        id: `register-${customer.id}`,
+        description: "Cadastro de cliente",
+        date,
+        time,
+        type: "register",
+        points: 0,
+      };
+      const txHistory = historyByCustomer.get(customer.id) ?? [];
+      return {
+        id: customer.id,
+        name: customer.name,
+        phone: formatPhoneBR(customer.phone),
+        email: customer.email,
+        points: pointsByCustomer.get(customer.id) ?? 0,
+        history: [...txHistory, registerRecord],
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
@@ -240,13 +252,23 @@ export function FidelidadeProvider({ children }: PropsWithChildren) {
 
       if (error) throw error;
 
+      const { date: regDate, time: regTime } = formatDateTimeBR(data.created_at);
       const createdCustomer: Customer = {
         id: data.id,
         name: data.name,
         phone: formatPhoneBR(data.phone),
         email: data.email,
         points: 0,
-        history: [],
+        history: [
+          {
+            id: `register-${data.id}`,
+            description: "Cadastro de cliente",
+            date: regDate,
+            time: regTime,
+            type: "register",
+            points: 0,
+          },
+        ],
       };
 
       setCustomers((prev) =>

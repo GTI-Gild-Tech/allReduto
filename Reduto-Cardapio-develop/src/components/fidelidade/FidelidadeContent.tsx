@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useFidelidade } from "../context/FidelidadeContext";
 import { FidelidadeTable } from "./FidelidadeTable";
 import { NewCustomerModal } from "./NewCustomerModal";
@@ -25,43 +25,15 @@ function SearchIcon({ className }: { className?: string }) {
   );
 }
 
-function PlusIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8 2v12M2 8h12" stroke="white" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ChevronDownIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function FidelidadeContent() {
   const { customers } = useFidelidade();
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   return (
     <div
-      className="basis-0 box-border content-stretch flex flex-col gap-[25px] grow items-center justify-start  lg:mx-[20%]  relative shrink-0 lg:mx-[20%]"
+      className="basis-0 box-border content-stretch flex flex-col gap-[25px] grow items-center justify-start lg:mx-[20%] relative shrink-0"
       data-name="Left side 8 Column"
     >
       {/* Title */}
@@ -89,7 +61,7 @@ export function FidelidadeContent() {
         </button>
 
         {/* Adicionar dropdown button */}
-        <div ref={dropdownRef} className="relative shrink-0">
+        <div className="relative shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-4 py-[11px] relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors">
@@ -102,13 +74,11 @@ export function FidelidadeContent() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-white min-w-[100px] shadow-[0px_10px_38px_-10px_rgba(22,_23,_24,_0.35),_0px_10px_20px_-15px_rgba(22,_23,_24,_0.2)] rounded-[6px] p-1" sideOffset={5}>
               <DropdownMenuItem onClick={() => {
-                  setIsDropdownOpen(false);
                   setIsNewCustomerOpen(true);
                 }} className="cursor-pointer hover:bg-slate-100">
                 Novo cliente
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
-                  setIsDropdownOpen(false);
                   setIsNewRecordOpen(true);
                 }} className="cursor-pointer hover:bg-slate-100">
                 Novo registro

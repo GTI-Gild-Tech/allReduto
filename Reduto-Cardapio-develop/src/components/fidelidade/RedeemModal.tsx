@@ -16,25 +16,41 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
   const customer = getCustomerById(customerId);
   const [points, setPoints] = useState("");
   const [observations, setObservations] = useState("");
+  const pointsValue = Number(points);
+  const isInvalidPoints = !points || !Number.isInteger(pointsValue) || pointsValue <= 0;
+  const isOverLimit = !!customer && Number.isFinite(pointsValue) && pointsValue > customer.points;
+  const isRedeemDisabled = isInvalidPoints || isOverLimit;
 
-  const handleSubmit = () => {
-    const pointsValue = parseInt(points);
+  const handleSubmit = async () => {
+    const pointsValue = Number(points);
 
-    if (!points || pointsValue <= 0) {
+    if (!points || !Number.isInteger(pointsValue) || pointsValue <= 0) {
       toast.error("Por favor, insira uma quantidade válida de pontos");
       return;
     }
 
     if (!customer || customer.points < pointsValue) {
-      toast.error("Pontos insuficientes para resgate");
+      toast.error(
+        `Saldo insuficiente: tentando resgatar ${pointsValue} pts, mas o cliente possui ${customer?.points ?? 0} pts.`
+      );
       return;
     }
 
-    redeemPoints(customerId, pointsValue);
-    toast.success(`${pointsValue} pontos resgatados com sucesso!`);
-    setPoints("");
-    setObservations("");
-    onClose();
+    try {
+      await redeemPoints(customerId, pointsValue, observations);
+      toast.success(`${pointsValue} pontos resgatados com sucesso!`);
+      setPoints("");
+      setObservations("");
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.includes("Pontos insuficientes")) {
+        toast.error(message);
+        return;
+      }
+      toast.error("Não foi possível concluir o resgate");
+      console.error("Erro ao resgatar pontos:", error);
+    }
   };
 
   const handleCancel = () => {
@@ -90,6 +106,11 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
                 className="w-full bg-transparent px-4 py-3 outline-none text-[#333] placeholder-[#bbb] rounded-lg"
               />
             </div>
+            {isOverLimit && (
+              <p className="text-[#b54708] text-[12px] px-1">
+                Aviso: quantidade maior que o saldo do cliente ({customer.points} pts).
+              </p>
+            )}
 
             <div className="relative rounded-lg border border-[#c0bab4] bg-[#faf8f5]">
               <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
@@ -120,7 +141,12 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
             </button>
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-[#0f4c50] text-white rounded-[50px] hover:bg-[#0d4247] transition-colors"
+              disabled={isRedeemDisabled}
+              className={`px-6 py-2 text-white rounded-[50px] transition-colors ${
+                isRedeemDisabled
+                  ? "bg-[#7f9a9c] cursor-not-allowed"
+                  : "bg-[#0f4c50] hover:bg-[#0d4247]"
+              }`}
             >
               Resgatar
             </button>
