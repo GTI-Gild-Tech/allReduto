@@ -1,5 +1,4 @@
 // src/components/pedidos/StatusSelect.tsx
-import React from "react";
 import type { PtStatus } from "../../services/status";
 
 const OPTIONS: { value: PtStatus; label: string }[] = [
@@ -22,7 +21,7 @@ export default function StatusSelect({ value, onChange, disabled, className }: P
       value={value}
       disabled={disabled}
       onChange={(e) => onChange(e.target.value as PtStatus)}
-      className={`rounded border px-2 py-1 text-sm ${className ?? ""}`}
+      className={`rounded border px-2 py-2 text-xs sm:text-sm transition-colors touch-manipulation ${className ?? ""}`}
     >
       {OPTIONS.map((o) => (
         <option key={o.value} value={o.value}>
