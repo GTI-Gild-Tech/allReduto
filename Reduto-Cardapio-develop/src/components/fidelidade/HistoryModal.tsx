@@ -31,9 +31,13 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
         <div className="flex flex-col items-center px-10 pt-10 pb-8 gap-7">
           <div className="flex flex-col items-center gap-2 text-center">
             <h2 className="text-[#0f4c50] text-[28px] font-bold">Histórico do Fidelidade</h2>
-            <p className="text-[#797474] text-[14px] max-w-[340px]">
-              Cliente: {customer.name}
-            </p>
+            <p className="text-[#333] text-[15px] font-medium">{customer.name}</p>
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
+              <p className="text-[#797474] text-[13px]">{customer.phone}</p>
+              {customer.email && (
+                <p className="text-[#797474] text-[13px]">{customer.email}</p>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-5 w-full">
@@ -52,18 +56,24 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex flex-col gap-1">
                           <p className="text-[#0f4c50]">{record.description}</p>
-                          <p className="text-[#797474] text-[12px]">{record.date}</p>
+                          <p className="text-[#797474] text-[12px]">{record.date}{record.time ? ` ${record.time}` : ""}</p>
+                          {record.notes && (
+                            <p className="text-[#555] text-[12px] italic">{record.notes}</p>
+                          )}
                         </div>
                         <div
                           className={`px-3 py-1 rounded-full shrink-0 ${
-                            record.type === "add"
+                            record.type === "register"
+                              ? "bg-[#6b7280] text-white"
+                              : record.type === "add"
                               ? "bg-[#0f4c50] text-white"
                               : "bg-[#fd8d14] text-white"
                           }`}
                         >
                           <p className="text-[12px]">
-                            {record.type === "add" ? "+" : ""}
-                            {record.points} pts
+                            {record.type === "register"
+                              ? "Cadastro"
+                              : `${record.type === "add" ? "+" : ""}${record.points} pts`}
                           </p>
                         </div>
                       </div>

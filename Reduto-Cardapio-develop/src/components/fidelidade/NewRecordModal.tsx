@@ -12,6 +12,8 @@ interface NewRecordModalProps {
   customerId?: string;
 }
 
+
+
 function calcPoints(total: number) {
   return Math.round(total);
 }
@@ -19,7 +21,7 @@ function calcPoints(total: number) {
 export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalProps) {
   const { customers, getCustomerById, addPoints } = useFidelidade();
   const { orders } = useOrders();
-
+  
   const normalizeOrderInput = (value: string) => {
     const trimmed = value.trimStart();
     if (!trimmed) return "";
@@ -43,6 +45,17 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
 
   const activeCustomerId = customerId ?? resolvedCustomerId;
   const customer = activeCustomerId ? getCustomerById(activeCustomerId) : undefined;
+  const parsedPoints = Number(earnedPoints);
+  const selectedOrderId = selectedOrder ? String(selectedOrder.id) : "";
+  const alreadyLinkedOrder =
+    !!selectedOrderId &&
+    customers.some((c) => c.history.some((h) => h.externalOrderId === selectedOrderId));
+  const isRegisterDisabled =
+    !activeCustomerId ||
+    !selectedOrder ||
+    !Number.isInteger(parsedPoints) ||
+    parsedPoints <= 0 ||
+    alreadyLinkedOrder;
 
   /* customer suggestions */
   const customerSuggestions = customerQuery.trim().length > 0
@@ -90,7 +103,7 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
     setShowOrderSugg(false);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!activeCustomerId) {
       toast.error("Selecione um cliente");
       return;
@@ -99,16 +112,44 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
       toast.error("Vincule um pedido antes de registrar");
       return;
     }
-    const pts = parseInt(earnedPoints);
-    if (!earnedPoints || isNaN(pts) || pts <= 0) {
+    const pts = Number(earnedPoints);
+    if (!earnedPoints || !Number.isInteger(pts) || pts <= 0) {
       toast.error("A quantidade de pontos deve ser maior que zero");
       return;
     }
+    if (alreadyLinkedOrder) {
+      toast.error("Este pedido já foi vinculado a outro cliente.");
+      return;
+    }
+
     const selectedOrderTotal = ((selectedOrder.totalCents ?? 0) / 100).toFixed(2).replace(".", ",");
     const desc = `Pedido ${selectedOrder.id} - R$ ${selectedOrderTotal}`;
-    addPoints(activeCustomerId, pts, desc);
-    toast.success(`${pts} pontos adicionados com sucesso!`);
-    handleCancel();
+
+    try {
+      await addPoints(activeCustomerId, pts, desc, {
+        externalOrderId: selectedOrderId,
+        orderTotalCents: selectedOrder.totalCents,
+        orderItemsCount: selectedOrder.items?.reduce(
+          (acc, item) => acc + (item.quantity ?? 0),
+          0
+        ),
+        source: "order",
+      });
+      toast.success(`${pts} pontos adicionados com sucesso!`);
+      handleCancel();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (
+        message.includes("já foi registrado") ||
+        message.includes("já foi vinculado") ||
+        message.toLowerCase().includes("duplicate")
+      ) {
+        toast.error("Este pedido já foi vinculado a outro cliente.");
+        return;
+      }
+      toast.error("Não foi possível registrar os pontos.");
+      console.error("Erro ao registrar pontos:", error);
+    }
   };
 
   const handleCancel = () => {
@@ -254,6 +295,11 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
                 </div>
               )}
             </div>
+            {alreadyLinkedOrder && selectedOrder && (
+              <p className="text-[#b54708] text-[12px] px-1">
+                Aviso: este pedido ja foi vinculado a um cliente.
+              </p>
+            )}
 
             {/* ── Earned points (visible after order selected) ─ */}
             {selectedOrder && (
@@ -294,7 +340,12 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
             </button>
             <button
               onClick={handleSubmit}
-              className="px-6 py-2 bg-[#0f4c50] text-white rounded-[50px] hover:bg-[#0d4247] transition-colors"
+              disabled={isRegisterDisabled}
+              className={`px-6 py-2 text-white rounded-[50px] transition-colors ${
+                isRegisterDisabled
+                  ? "bg-[#7f9a9c] cursor-not-allowed"
+                  : "bg-[#0f4c50] hover:bg-[#0d4247]"
+              }`}
             >
               Registrar
             </button>

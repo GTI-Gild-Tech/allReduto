@@ -387,14 +387,24 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   </div>
 
   <label className="flex items-center gap-3 text-[14px] font-['Open_Sans:Regular',_sans-serif]">
-    <input
-      type="checkbox"
-      checked={!!formData.is_visible}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, is_visible: e.target.checked }))
+    <button
+      type="button"
+      role="switch"
+      aria-checked={!!formData.is_visible}
+      aria-label="Mostrar no cardápio do cliente"
+      onClick={() =>
+        setFormData((prev) => ({ ...prev, is_visible: !prev.is_visible }))
       }
-      className="h-4 w-4 accent-[#0f4c50]"
-    />
+      className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+        formData.is_visible ? "bg-[#0f4c50]" : "bg-[#9ca3af]"
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          formData.is_visible ? "translate-x-5" : "translate-x-1"
+        }`}
+      />
+    </button>
     <span className="text-[#0f4c50]">
       {formData.is_visible ? "Visível" : "Oculto"}
     </span>

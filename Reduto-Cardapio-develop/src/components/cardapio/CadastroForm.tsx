@@ -34,11 +34,22 @@ function CadastroLeftColumn({
       <div className="absolute left-0 top-[248px] w-[350px]">
         <div className="text-[13px] mb-1">Mostrar no cardápio do cliente</div>
         <label className="flex items-center gap-2 text-[13px] select-none">
-          <input
-            type="checkbox"
-            checked={isVisible}
-            onChange={(e) => onToggleVisible(e.target.checked)}
-          />
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isVisible}
+            aria-label="Mostrar no cardápio do cliente"
+            onClick={() => onToggleVisible(!isVisible)}
+            className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
+              isVisible ? "bg-[#0f4c50]" : "bg-[#9ca3af]"
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                isVisible ? "translate-x-5" : "translate-x-1"
+              }`}
+            />
+          </button>
           <span>{isVisible ? "Visível" : "Oculto"}</span>
         </label>
       </div>
