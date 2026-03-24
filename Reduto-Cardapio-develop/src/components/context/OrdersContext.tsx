@@ -166,7 +166,7 @@ function formatOrderDTO(dto: any): OrderUI {
 
   return {
     id,
-    orderNumber: String(id || ""),
+    orderNumber: String(dto?.order_number ?? id ?? ""),
     createdAt,
     name: customerName || "",
     table: table || "",
