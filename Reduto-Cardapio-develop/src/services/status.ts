@@ -6,6 +6,7 @@ export type PtStatus =
   | "preparando"
   | "pronto"
   | "enviado"
+  | "pago"
   | "cancelado";
 
 // Status que a API usa (ajuste se necessário)
@@ -13,6 +14,7 @@ export type ApiStatus =
   | "pending"
   | "processing"
   | "delivered"
+  | "paid"
   | "shipped"
   | "canceled";
 
@@ -20,6 +22,7 @@ const ptToApiMap: Record<PtStatus, ApiStatus> = {
   pendente: "pending",
   preparando: "processing",
   pronto: "delivered", // mapeie conforme seu fluxo
+  pago: "paid",
   enviado: "shipped",
   cancelado: "canceled",
 };
@@ -28,6 +31,7 @@ const apiToPtMap: Record<ApiStatus, PtStatus> = {
   pending: "pendente",
   processing: "preparando",
   delivered: "pronto",
+  paid: "pago",
   shipped: "enviado",
   canceled: "cancelado",
 };
