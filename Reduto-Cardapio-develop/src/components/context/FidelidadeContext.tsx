@@ -204,33 +204,12 @@ export function FidelidadeProvider({ children }: PropsWithChildren) {
   }, []);
 
   useEffect(() => {
-  refreshCustomers().catch((err) => {
-    console.error("Erro ao carregar fidelidade:", err);
-    setLoading(false);
-  });
+    refreshCustomers().catch((err) => {
+      console.error("Erro ao carregar fidelidade:", err);
+      setLoading(false);
+    });
+  }, [refreshCustomers]);
 
-  const channel = supabase
-    .channel("fidelidade-realtime")
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "loyalty_transactions" },
-      async () => {
-        await refreshCustomers();
-      }
-    )
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "loyalty_customers" },
-      async () => {
-        await refreshCustomers();
-      }
-    )
-    .subscribe();
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [refreshCustomers]);
   const getCustomerById = useCallback(
     (customerId: string) => customers.find((customer) => customer.id === customerId),
     [customers]
