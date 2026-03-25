@@ -11,7 +11,7 @@ export default function NavButton({ active, children }: NavButtonProps) {
   return (
     <div
       className={clsx(
-        "px-4 py-2 rounded-full text-sm font-medium transition-colors",
+        "md:px-4 px-2 py-2 rounded-full text-sm font-medium transition-colors",
         active
           ? "bg-[#c1a07b] text-white shadow"
           : "bg-transparent text-[#0f4c50] hover:bg-gray-100"

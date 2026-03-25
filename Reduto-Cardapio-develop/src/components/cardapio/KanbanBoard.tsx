@@ -328,7 +328,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#f9f8f5] !max-w-[1200px] min-h-[700px] w-[1200px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-[#f9f8f5] max-w-full md:max-w-[1200px] min-h-[700px] w-full md:w-[1200px] max-h-[90vh] overflow-y-auto p-4 md:p-8">
         <DialogHeader className="pb-6">
           <DialogTitle className="font-['Retrokia:Demo',_sans-serif] text-[#0f4c50] text-[24px]">
             {product ? 'Editar Produto' : 'Novo Produto'}
@@ -338,9 +338,9 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
           </DialogDescription>
         </DialogHeader>
         
-        <div className="content-stretch flex gap-8 items-start justify-start relative shrink-0 px-6 pb-4">
+        <div className="content-stretch flex flex-col md:flex-row gap-4 md:gap-8 items-start justify-start relative shrink-0 px-0 md:px-6 pb-4">
           {/* Left column - Basic info */}
-          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-[450px]">
+          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:w-[450px]">
             {/* Nome */}
             <div className="relative shrink-0 w-full">
               <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]" style={{ fontVariationSettings: "'wdth' 100" }}>
@@ -480,7 +480,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
           </div>
 
           {/* Right column - Price options */}
-          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-[500px]">
+          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:w-[500px]">
             {/* Tamanho ou quantidade */}
             <div className="relative shrink-0 w-full">
               <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start relative w-full">
@@ -661,8 +661,16 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
           </div>
         </div>
 
-        {/* Main Button */}
-        <div className="flex justify-center pt-8 pb-4 px-6">
+        {/* Main Buttons */}
+        <div className="flex justify-center gap-4 pt-8 pb-4 px-6 flex-wrap">
+          <button
+            onClick={onClose}
+            className="border border-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-[60px] py-5 relative rounded-[50px] shrink-0 hover:bg-[#f0f0f0] transition-colors min-w-[280px]"
+          >
+            <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[18px] text-center text-nowrap text-[#0f4c50] tracking-[0.2px]" style={{ fontVariationSettings: "'wdth' 100" }}>
+              <p className="leading-none whitespace-pre">Cancelar</p>
+            </div>
+          </button>
           <button
             onClick={handleSave}
             className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-[60px] py-5 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors min-w-[280px]"

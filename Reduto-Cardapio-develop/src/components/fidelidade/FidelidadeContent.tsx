@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useFidelidade } from "../context/FidelidadeContext";
 import { FidelidadeTable } from "./FidelidadeTable";
+import { FidelidadeMobileView } from "./FidelidadeMobileView";
 import { NewCustomerModal } from "./NewCustomerModal";
 import { NewRecordModal } from "./NewRecordModal";
 import {
@@ -33,32 +34,36 @@ export function FidelidadeContent() {
 
   return (
     <div
-      className="basis-0 box-border content-stretch flex flex-col gap-[25px] grow items-center justify-start lg:mx-[20%] relative shrink-0"
+      className="basis-0 box-border content-stretch flex flex-col gap-[25px] grow items-center justify-start xl:mx-[20%] lg:mx-[10%] mx-[5%] relative shrink-0"
       data-name="Left side 8 Column"
     >
       {/* Title */}
       <TitleCommon text="Fidelidade" />
 
       {/* Search bar */}
-      <div className="flex flex-row gap-2 items-center justify-center relative shrink-0">
+      <div className="flex flex-row gap-2 md:gap-10 items-center justify-center relative shrink-0">
         {/* Input container */}
-        <div className=" bg-[rgba(248,248,248,0.75)] border-[#b5b5b5] border-solid box-border flex flex-row items-center px-[15px] py-[6px] relative rounded-[5px] shrink-0 w-[100%] border">
+
+        <div className="flex flex-row w-[100%]">
+          <div className=" bg-[rgba(248,248,248,0.75)] border-[#b5b5b5] border-solid box-border flex flex-row items-center px-[15px] py-[6px] relative rounded-[5px] shrink-0 w-[100%] border">
           <input
             type="text"
             placeholder="Digite o nome ou telefone do cliente"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border-none outline-none text-black placeholder-[#797474] bg-transparent w-full"
+            className="border-none outline-none text-black placeholder-[#797474] bg-transparent w-full md:min-w-[240px]"
           />
         </div>
 
         {/* Search button */}
         <button
           onClick={() => {}}
-          className="bg-[#0f4c50] hover:bg-[#0d4247] transition-colors flex items-center justify-center w-9 h-9 rounded-md shrink-0 cursor-pointer"
+          className="hidden md:flex bg-[#0f4c50] hover:bg-[#0d4247] transition-colors items-center justify-center w-[37px] h-[37px] rounded-md shrink-0 cursor-pointer "
         >
           <SearchIcon className="w-5 h-5"/>
         </button>
+        </div>
+        
 
         {/* Adicionar dropdown button */}
         <div className="relative shrink-0">
@@ -88,7 +93,10 @@ export function FidelidadeContent() {
         </div>
       </div>
 
-      <FidelidadeTable searchTerm={searchTerm} customers={customers} />
+      <div className="hidden md:block w-full">
+        <FidelidadeTable searchTerm={searchTerm} customers={customers} />
+      </div>
+      <FidelidadeMobileView searchTerm={searchTerm} customers={customers} />
 
       <NewCustomerModal
         isOpen={isNewCustomerOpen}

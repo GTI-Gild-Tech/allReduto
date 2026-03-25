@@ -5,8 +5,8 @@ interface FormFieldProps {
 
 export function FormField({ label, placeholder }: FormFieldProps) {
   return (
-    <div className="relative h-[59.8px] w-[350px]">
-      <div className="absolute h-[36.8px] left-0 rounded-[5px] top-[23px] w-[350px]">
+    <div className="relative w-full">
+      <div className="absolute h-[36.8px] left-0 rounded-[5px] top-[23px] w-full">
         <div
           aria-hidden="true"
           className="absolute border border-[#b5b5b5] border-solid inset-0 pointer-events-none rounded-[5px] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.25)]"
@@ -84,11 +84,11 @@ interface CadastroSizeValueRowProps {
 
 export function CadastroSizeValueRow({ size }: CadastroSizeValueRowProps) {
   return (
-    <div className="content-stretch flex gap-[11px] items-center justify-start relative shrink-0">
+    <div className="content-stretch flex gap-[11px] items-center justify-start relative shrink-0 w-full">
       <CadastroBadgeGhost className="w-[92px]">
         {size}
       </CadastroBadgeGhost>
-      <div className="h-9 relative rounded-[5px] shrink-0 w-[166px]">
+      <div className="h-9 relative rounded-[5px] shrink-0 flex-1">
         <div
           aria-hidden="true"
           className="absolute border border-[#b5b5b5] border-solid inset-0 pointer-events-none rounded-[5px] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.25)]"
@@ -106,7 +106,7 @@ export function CadastroSizeValueRow({ size }: CadastroSizeValueRowProps) {
 export function CadastroSizeValues() {
   return (
     <div
-      className="box-border content-stretch flex flex-col gap-2 h-[126px] items-start justify-center overflow-clip px-0 py-1 relative shrink-0 w-full"
+      className="box-border content-stretch flex flex-col gap-2 items-start justify-start overflow-clip px-0 py-1 relative shrink-0 w-full"
       data-name="tags"
     >
       <CadastroSizeValueRow size="Tamanho P" />

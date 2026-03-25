@@ -36,7 +36,7 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
   };
 
   function PointsBar({ points }: { points: number }) {
-    const MAX = 1000;
+    const MAX = 300;
     const pct = Math.min(points / MAX, 1) * 100;
 
     return (
@@ -68,100 +68,120 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
   }
 
   return (
-    <>
-      <div className="box-border content-stretch flex flex-col gap-0 items-start justify-start overflow-hidden relative shrink-0 w-full rounded-sm">
-        {/* Table Header */}
-        <div
-          className="box-border content-stretch flex flex-row gap-0 items-stretch justify-start overflow-hidden relative shrink-0 w-full rounded-t-lg bg-[#C1A07B]"
+    <div className="mx-10 lg:mx-0">
+      <div className="box-border flex flex-col gap-0 items-start justify-start overflow-hidden w-full rounded-lg">
+        {/* Table Grid */}
+        <div 
+          className="grid w-full gap-0 rounded-t-xl"
+          style={{
+            gridTemplateColumns: "1fr 150px 1fr 140px 200px",
+          }}
         >
-          {/* Nome */}
-          <div className="w-[200px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 relative shrink-0">
+          {/* Header Row */}
+          <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0">
             <span className="not-italic relative shrink-0 text-nowrap text-white font-bold">
               Nome
             </span>
           </div>
-          {/* Telefone */}
-          <div className="basis-0 grow box-border flex flex-row gap-2.5 items-center justify-start min-w-px px-5 py-3 relative shrink-0">
+          <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0">
             <span className="not-italic relative shrink-0 text-nowrap text-white font-bold">
               Telefone
             </span>
           </div>
-          {/* Fidelidade */}
-           <div className="basis-0 grow box-border flex flex-row gap-2.5 items-center justify-start min-w-px px-5 py-3 relative shrink-0">
+          <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0">
             <span className="not-italic relative shrink-0 text-nowrap text-white font-bold">
               Fidelidade
             </span>
           </div>
-          {/* Último registro */}
-          <div className="w-[180px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 relative shrink-0">
+          <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0">
             <span className="not-italic relative shrink-0 text-nowrap text-white font-bold">
               Último registro
             </span>
           </div>
-          {/* Actions spacer */}
-          <div className="w-[200px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 relative shrink-0" />
+          <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0" />
+
+          {/* Table Rows */}
+          {filteredCustomers.map((customer, index) => (
+            <>
+              {/* Nome */}
+              <div
+                key={`name-${customer.id}`}
+                className={`box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 shrink-0 min-w-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
+                }`}
+              >
+                <span
+                  className="not-italic relative block w-full overflow-hidden text-ellipsis whitespace-nowrap text-[#0f4c50]"
+                  title={customer.name}
+                >
+                  {customer.name}
+                </span>
+              </div>
+
+              {/* Telefone */}
+              <div
+                key={`phone-${customer.id}`}
+                className={`box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 shrink-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
+                }`}
+              >
+                <span className="not-italic relative shrink-0 text-[#0f4c50] text-nowrap">
+                  {customer.phone}
+                </span>
+              </div>
+
+              {/* Fidelidade */}
+              <div
+                key={`points-${customer.id}`}
+                className={`box-border flex flex-row items-center justify-start px-5 py-2.5 shrink-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
+                }`}
+              >
+                <PointsBar points={customer.points} />
+              </div>
+
+              {/* Último registro */}
+              <div
+                key={`record-${customer.id}`}
+                className={`box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 shrink-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
+                }`}
+              >
+                <span className="not-italic relative shrink-0 text-[#555] text-nowrap text-[13px]">
+                  {getLastRecord(customer)}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div
+                key={`actions-${customer.id}`}
+                className={`box-border flex flex-row gap-2 items-center justify-end px-4 py-2.5 shrink-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
+                }`}
+              >
+                <button
+                  onClick={() => handleViewHistory(customer.id)}
+                  className="box-border flex flex-row gap-1 items-center justify-center px-3 py-1.5 relative rounded-[5px] shrink-0 cursor-pointer transition-colors border border-[#b0a89a] bg-white hover:bg-[#f0ece6] text-[#555] text-[12px]"
+                >
+                  Ver histórico
+                </button>
+                <button
+                  onClick={() => handleRedeem(customer.id)}
+                  className="bg-[#0f4c50] box-border flex flex-row gap-1 items-center justify-center px-3 py-1.5 relative rounded-[5px] shrink-0 cursor-pointer hover:opacity-90 transition-opacity text-white text-[12px]"
+                >
+                  Resgatar
+                </button>
+              </div>
+            </>
+          ))}
+
+          {/* No results */}
+          {filteredCustomers.length === 0 && (
+            <div className="col-span-5 w-full bg-white py-8 flex items-center justify-center">
+              <span className="text-[#797474]">Nenhum cliente encontrado</span>
+            </div>
+          )}
         </div>
-
-        {/* Table Rows */}
-        {filteredCustomers.map((customer, index) => (
-          <div
-            key={customer.id}
-            className={`box-border content-stretch flex flex-row gap-0 items-center justify-start overflow-hidden relative shrink-0 w-full ${
-              index % 2 === 0 ? "bg-white" : "bg-[#fcf9f5]"
-            }`}
-          >
-            {/* Nome */}
-            <div className="w-[200px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 relative shrink-0 min-w-0">
-              <span
-                className="not-italic relative block w-full overflow-hidden text-ellipsis whitespace-nowrap text-[#0f4c50]"
-                title={customer.name}
-              >
-                {customer.name}
-              </span>
-            </div>
-
-            {/* Telefone */}
-            <div className=" box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 relative shrink-0">
-              <span className="not-italic relative shrink-0 text-[#0f4c50] text-nowrap">
-                {customer.phone}
-              </span>
-            </div>
-
-            {/* Fidelidade (progress bar) */}
-            <div className="basis-0 grow box-border flex flex-row items-center justify-start min-w-px  py-2.5 relative shrink-0">
-              <PointsBar points={customer.points} />
-            </div>
-
-            {/* Último registro */}
-            <div className="w-[180px] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-2.5 relative shrink-0">
-              <span className="not-italic relative shrink-0 text-[#555] text-nowrap text-[13px]">
-                {getLastRecord(customer)}
-              </span>
-            </div>
-
-            {/* Actions */}
-            <div className="w-[200px] box-border flex flex-row gap-2 items-center justify-end px-4 py-2.5 relative shrink-0">
-              <button
-                onClick={() => handleViewHistory(customer.id)}
-                className="box-border flex flex-row gap-1 items-center justify-center px-3 py-1.5 relative rounded-[5px] shrink-0 cursor-pointer transition-colors border border-[#b0a89a] bg-white hover:bg-[#f0ece6] text-[#555] text-[12px]"
-              >
-                Ver histórico
-              </button>
-              <button
-                onClick={() => handleRedeem(customer.id)}
-                className="bg-[#0f4c50] box-border flex flex-row gap-1 items-center justify-center px-3 py-1.5 relative rounded-[5px] shrink-0 cursor-pointer hover:opacity-90 transition-opacity text-white text-[12px]"
-              >
-                Resgatar
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {filteredCustomers.length === 0 && (
-          <div className="w-full bg-white py-8 flex items-center justify-center">
-            <span className="text-[#797474]">Nenhum cliente encontrado</span>
-          </div>
-        )}
       </div>
 
       {selectedCustomerId && (
@@ -192,6 +212,6 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
           />
         </>
       )}
-    </>
+    </div>
   );
 }

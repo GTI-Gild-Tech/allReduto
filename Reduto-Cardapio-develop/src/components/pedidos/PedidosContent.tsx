@@ -302,7 +302,7 @@ export default function PedidosContent() {
 
 
   return (
-    <div className="space-y-4 flex-col items-center justify-center text-center self-center lg:mx-[20%] mx-5">
+    <div className="space-y-4 flex-col items-center justify-center text-center self-center xl:mx-[20%] lg:mx-[10%] md:mx-[20px] mx-5">
       {/* HEADER: título central e filtro à direita */}
       <TitleCommon text="Pedidos" />
 
@@ -365,9 +365,9 @@ export default function PedidosContent() {
                 </div>
 
                 {/* Linha inferior: dados + ações */}
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex md:flex-row flex-col md:items-center md:justify-between gap-4">
                   {/* Dados da esquerda */}
-                  <div className="text-sm text-gray-600 flex items-center gap-4">
+                  <div className="text-sm text-gray-600 flex items-center gap-4 justify-start">
                     <span>
                       Cliente: <strong>{o.name || "—"}</strong>
                     </span>
@@ -383,7 +383,7 @@ export default function PedidosContent() {
                   </div>
 
                   {/* Ações da direita */}
-                  <div className="flex items-center gap-2 relative">
+                  <div className="flex items-center gap-2 relative justify-end">
                     <span className="text-sm text-gray-600">Status</span>
                     <StatusSelect
                       value={o.status}
@@ -408,7 +408,7 @@ export default function PedidosContent() {
                             setOpenMenuId(null);
                           }}
                           disabled={isSaving(o.id)}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors first:rounded-t-lg"
+                          className="hidden xs:block md:w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors first:rounded-t-lg"
                         >
                           Marcar como pronto
                       </ActionButton>

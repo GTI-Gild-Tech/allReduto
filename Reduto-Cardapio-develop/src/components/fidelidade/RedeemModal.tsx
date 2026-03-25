@@ -64,6 +64,7 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
+        
         className="max-w-[520px] p-0 gap-0 rounded-2xl overflow-hidden border-0 shadow-xl"
         style={{ backgroundColor: "#faf8f5" }}
       >

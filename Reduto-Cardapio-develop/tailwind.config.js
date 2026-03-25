@@ -2,7 +2,12 @@
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        'xs': '32rem',    // Novo breakpoint 
+        '3xl': '120rem',  // Novo breakpoint (1920px)
+      },
+    },
   },
   plugins: [],
 };

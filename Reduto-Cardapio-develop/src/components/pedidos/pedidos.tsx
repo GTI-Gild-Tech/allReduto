@@ -354,7 +354,7 @@ export default function PedidosContent() {
             o.totalCents != null ? formatBRL(o.totalCents) : o.total ?? "";
           return (
             <div key={o.id} className="rounded border bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between ">
                 {/* Bloco esquerdo: dados */}
                 <div>
                   <div className="flex items-center gap-2">
