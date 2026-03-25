@@ -11,6 +11,7 @@ import React, {
 import api from "../../services/api";
 import { fromApiStatus, toApiStatus, PtStatus } from "../../services/status";
 import ErrorPopup from "../ErrorPopup";
+import { supabase } from "../../services/supabase"; // ajuste o caminho se precisar
 
 /* =========================================================
    Tipos
@@ -145,12 +146,14 @@ function formatOrderDTO(dto: any): OrderUI {
     dto?.created_at ?? dto?.createdAt ?? dto?.created_at?.toString?.() ?? "";
 
   const totalCents =
-    Number(
-      dto?.total_cents ??
+  dto?.total_cents != null
+    ? Number(dto.total_cents) || 0
+    : dto?.total != null
+    ? Math.round(Number(dto.total) * 100)
+    : Number(
         dto?.totalCents ??
-        dto?.total ??
         Math.round(items.reduce((acc, it) => acc + (it.subtotalCents ?? 0), 0))
-    ) || 0;
+      ) || 0;
 
   const statusApi =
     dto?.status ??
@@ -163,7 +166,7 @@ function formatOrderDTO(dto: any): OrderUI {
 
   return {
     id,
-    orderNumber: String(id || ""),
+    orderNumber: String(dto?.order_number ?? id ?? ""),
     createdAt,
     name: customerName || "",
     table: table || "",
@@ -183,133 +186,183 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await api.get("/orders");
-      //console.log("[OrdersContext] GET /orders → data:", data);
-      const list: any[] = Array.isArray(data) ? data : data?.orders ?? [];
-      const mapped = list.map(formatOrderDTO);
-      setOrders(mapped);
-    } catch (err: any) {
-      setError(err?.message ?? "Erro ao carregar pedidos");
-      setShowErrorPopup(true);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  setLoading(true);
+  setError(null);
 
-  useEffect(() => {
-  refresh();
-}, [refresh]);
+  try {
+    const { data, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        order_items (*)
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const mapped = (data ?? []).map(formatOrderDTO);
+    setOrders(mapped);
+  } catch (err: any) {
+    setError(err?.message ?? "Erro ao carregar pedidos");
+    setShowErrorPopup(true);
+  } finally {
+    setLoading(false);
+  }
+}, []);
 
   const createOrderFromCart = useCallback(
-    async (params: CreateFromCartParams): Promise<OrderUI> => {
-      const { name, table, items } = params;
-      const payload = {
-        customer: { name },
-        table_number: table,
-        items: items.map((it) => ({
-          product_id: it.productId,
-          size: it.size,
-          quantity: it.quantity,
-          unit_price_cents: it.unitPriceCents,
-          total_cents: it.unitPriceCents * it.quantity,
-        })),
-      };
+  async (params: CreateFromCartParams): Promise<OrderUI> => {
+    const { name, table, items } = params;
 
-      console.log("[OrdersContext] POST /orders payload:", payload);
-
-      try {
-        const res = await api.post("/orders", payload);
-        console.log("[OrdersContext] POST /orders response:", res.data);
-        const saved = res.data?.order ?? res.data;
-        const formatted = formatOrderDTO(saved);
-        setOrders((prev) => [formatted, ...prev]);
-        return formatted; // ✅ devolve o pedido confirmado pelo backend
-      } catch (err: any) {
-        console.error("[OrdersContext] POST /orders error:", err);
-
-        // Extrai mensagem do backend (se houver) e padroniza para o usuário
-        const backendMsg =
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          err?.message;
-
-        const userMsg =
-          backendMsg && String(backendMsg).trim().length > 0
-            ? String(backendMsg)
-            : "Não conseguimos salvar seu pedido. Tente novamente.";
-
-        const e = new Error(userMsg);
-        (e as any).status = err?.response?.status;
-        throw e; // ❌ UI captura e exibe a mensagem amigável
-      }
-    },
-    []
-  );
-
-  const updateOrderStatus = useCallback(
-    async (id: number | string, newStatusPt: PtStatus) => {
-      const status = toApiStatus(newStatusPt);
-      console.log("[OrdersContext] PUT /orders/%s status:", id, status);
-      try {
-        const res = await api.put(`/orders/${id}`, { status });
-        console.log("[OrdersContext] PUT /orders response:", res.data);
-        setOrders((prev) =>
-          prev.map((o) => (o.id === id ? { ...o, status: newStatusPt } : o))
-        );
-      } catch (err: any) {
-        console.error("[OrdersContext] PUT /orders error:", err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  const updateOrderInfo = useCallback(
-    async (
-      id: number | string,
-      data: { name?: string; table?: string | number }
-    ) => {
-      const payload = {
-        customer: { name: data.name },
-        table: data.table,
-        table_number: data.table,
-      };
-      console.log("[OrdersContext] PUT /orders/%s payload:", id, payload);
-      try {
-        const res = await api.put(`/orders/${id}`, payload);
-        console.log("[OrdersContext] PUT /orders response:", res.data);
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === id
-              ? {
-                  ...o,
-                  name: data.name ?? o.name,
-                  table: data.table ?? o.table,
-                }
-              : o
-          )
-        );
-      } catch (err: any) {
-        console.error("[OrdersContext] PUT /orders error:", err);
-        throw err;
-      }
-    },
-    []
-  );
-
-  const deleteOrder = useCallback(async (id: number | string) => {
-    console.log("[OrdersContext] DELETE /orders/%s", id);
+    const total = items.reduce(
+      (acc, it) => acc + (it.unitPriceCents * it.quantity) / 100,
+      0
+    );
+const phoneOnly = String(name ?? "").replace(/\D/g, "");
     try {
-      await api.delete(`/orders/${id}`);
-      setOrders((prev) => prev.filter((o) => o.id !== id));
+      const { data: order, error: orderError } = await supabase
+  .from("orders")
+  .insert({
+    customer_name: phoneOnly,
+    customer_phone: phoneOnly,
+    table_number: String(table),
+    status: "pending",
+    total,
+  })
+  .select()
+  .single();
+
+      if (orderError) throw orderError;
+
+      const orderItemsPayload = items.map((it) => ({
+        order_id: order.id,
+        product_id: it.productId,
+        product_name: it.name ?? null,
+        size: it.size ?? null,
+        quantity: it.quantity,
+        unit_price: it.unitPriceCents / 100,
+        line_total: (it.unitPriceCents * it.quantity) / 100,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItemsPayload);
+
+      if (itemsError) throw itemsError;
+
+      const { data: fullOrder, error: reloadError } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items (*)
+        `)
+        .eq("id", order.id)
+        .single();
+
+      if (reloadError) throw reloadError;
+
+      const formatted = formatOrderDTO(fullOrder);
+      setOrders((prev) => [formatted, ...prev]);
+      return formatted;
     } catch (err: any) {
-      console.error("[OrdersContext] DELETE /orders error:", err);
+      console.error("[OrdersContext] createOrderFromCart error:", err);
+
+      const userMsg =
+        err?.message && String(err.message).trim().length > 0
+          ? String(err.message)
+          : "Não conseguimos salvar seu pedido. Tente novamente.";
+
+      const e = new Error(userMsg);
+      throw e;
+    }
+  },
+  []
+);
+
+ const updateOrderStatus = useCallback(
+  async (id: number | string, newStatusPt: PtStatus) => {
+    const status = toApiStatus(newStatusPt);
+
+    try {
+      const { data, error } = await supabase
+        .from("orders")
+        .update({ status })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === id
+            ? {
+                ...o,
+                status: fromApiStatus(data.status),
+              }
+            : o
+        )
+      );
+    } catch (err: any) {
+      console.error("[OrdersContext] updateOrderStatus error:", err);
       throw err;
     }
-  }, []);
+  },
+  []
+);
+
+  const updateOrderInfo = useCallback(
+  async (
+    id: number | string,
+    data: { name?: string; table?: string | number }
+  ) => {
+    try {
+      const payload: Record<string, any> = {};
+
+      if (data.name !== undefined) payload.customer_name = data.name;
+      if (data.table !== undefined) payload.table_number = String(data.table);
+
+      const { error } = await supabase
+        .from("orders")
+        .update(payload)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === id
+            ? {
+                ...o,
+                name: data.name ?? o.name,
+                table: data.table ?? o.table,
+              }
+            : o
+        )
+      );
+    } catch (err: any) {
+      console.error("[OrdersContext] updateOrderInfo error:", err);
+      throw err;
+    }
+  },
+  []
+);
+
+  const deleteOrder = useCallback(async (id: number | string) => {
+  try {
+    const { error } = await supabase
+      .from("orders")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+
+    setOrders((prev) => prev.filter((o) => o.id !== id));
+  } catch (err: any) {
+    console.error("[OrdersContext] deleteOrder error:", err);
+    throw err;
+  }
+}, []);
 
   const value = useMemo(
     () => ({
