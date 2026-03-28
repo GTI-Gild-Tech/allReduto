@@ -129,6 +129,7 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
               Mesa: <strong>{order.table ?? "—"}</strong> • Cliente:{" "}
               <strong>{order.name ?? "—"}</strong>
             </p>
+            
           </div>
           <button
             onClick={onClose}

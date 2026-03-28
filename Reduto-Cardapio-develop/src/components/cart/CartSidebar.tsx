@@ -32,6 +32,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
   const [step, setStep] = useState<"cart" | "details">("cart");
   const [customerName, setCustomerName] = useState("");
   const [tableNumber, setTableNumber] = useState<string>("");
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState(false);
   const [showErrorPopup, setShowErrorPopup] = useState(false);
@@ -49,6 +50,37 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
 
   const canFinish = cartItems.length > 0 && !!customerName.trim();
   const canContinue = cartItems.length > 0;
+
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Extrai APENAS os dígitos
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    
+    // Limita a no máximo 11 dígitos
+    if (digitsOnly.length > 11) return;
+    
+    let formatted = "";
+    
+    // Formata baseado na contagem CORRETA de dígitos
+    if (digitsOnly.length === 0) {
+      formatted = "";
+    } else if (digitsOnly.length <= 2) {
+      formatted = `(${digitsOnly}`;
+    } else if (digitsOnly.length <= 7) {
+      // 3-7 dígitos: (XX) XXXXX (sem traço)
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2)}`;
+    } else if (digitsOnly.length === 8) {
+      // 8 dígitos: (XX) XXXX-XXXX
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)}-${digitsOnly.slice(6)}`;
+    } else if (digitsOnly.length === 9 || digitsOnly.length === 10) {
+      // 9-10 dígitos: (XX) XXXXX-XXXX / (XX) XXXX-XXXX
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)}-${digitsOnly.slice(6)}`;
+    } else if (digitsOnly.length === 11) {
+      // 11 dígitos: (XX) XXXXX-XXXX
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 7)}-${digitsOnly.slice(7)}`;
+    }
+    
+    setPhoneNumber(formatted);
+  };
 
   const goToDetails = () => {
     if (cartItems.length === 0) return;
@@ -76,6 +108,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
       setStep("cart");
       setCustomerName("");
       setTableNumber("");
+      setPhoneNumber("");
     } catch (err: any) {
       setErrorMessage(err?.message || "Falha ao finalizar pedido. Tente novamente.");
       setShowErrorPopup(true);
@@ -179,12 +212,16 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
                 <label className="block text-sm font-medium text-[#0f4c50]">
                   Telefone (opcional)
                 </label>
+                
                 <input
                   className="mt-1 w-full rounded border px-3 py-2"
-                  value={tableNumber}
-                  onChange={(e) => setTableNumber(e.target.value)}
-                  placeholder="para o registro no fidelidade"
+                  value={phoneNumber}
+                  onChange={handlePhoneNumberChange}
+                  placeholder="Ex: (87) 99999-9999"
+                  maxLength={15}
+                  type="tel"
                 />
+                <small className="text-gray-500">Caso queira registrar no fidelidade é obrigatório</small>
               </div>
             </div>
           )}

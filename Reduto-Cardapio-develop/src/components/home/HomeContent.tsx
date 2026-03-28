@@ -32,8 +32,7 @@ function MenuProductCard({ product }: MenuProductCardProps) {
     return product.sizes
       .map((s: any) => {
         const label = s.size ?? s.name ?? s.label ?? "Único";
-        const priceNum = Number(s.price ?? s.price_cents / 100 ?? 0);
-        return `${label} - ${formatBRL(priceNum)}`;
+        return `${label} - ${formatBRL(Number(s.price))}`;
       })
       .join(" | ");
   };
@@ -64,18 +63,22 @@ function MenuProductCard({ product }: MenuProductCardProps) {
         />
       </div>
 
-      {/* Nome */}
-      <h3 className="font-semibold text-[#0f4c50] text-[20px]">{product.name}</h3>
+      <div className="flex flex-col justify-evenly grow">
+        <div className="flex ">
+        {/* Nome */}
+        <h3 className="font-semibold text-[#0f4c50] text-[20px]">{product.name}</h3>
+        </div>
 
-      {/* Preços */}
-      <p className="text-[#2f1b04] text-[14px]">{formatPrices()}</p>
+        {/* Preços */}
+        <p className="text-[#2f1b04] text-[14px]">{formatPrices()}</p>
 
-      {/* Descrição — aparece só na impressão */}
-      {product.description?.trim() ? (
-        <p className="show-on-print text-[12px] text-gray-700 mt-1" style={{ display: "none" }}>
-          {product.description}
-        </p>
-      ) : null}
+        {/* Descrição — aparece só na impressão */}
+        {product.description?.trim() ? (
+          <p className="show-on-print text-[12px] text-gray-700 mt-1" style={{ display: "none" }}>
+            {product.description}
+          </p>
+        ) : null}
+      </div>
 
       {/* Botão — escondido na impressão */}
       <button

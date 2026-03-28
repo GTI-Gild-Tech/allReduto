@@ -28,6 +28,7 @@ type OrderUI = {
   id: number | string;
   orderNumber?: string;
   name?: string;
+  phone?: string;
   table?: string | number;
   items?: OrderItemUI[];
   /** Total em CENTAVOS */
@@ -57,6 +58,19 @@ function toYMDLocal(d: Date | string | number | undefined | null): string | null
   const mm = String(dt.getMonth() + 1).padStart(2, "0");
   const dd = String(dt.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Formata data/hora para "DD/MM/YYYY HH:MM" */
+function formatDateTime(d: Date | string | number | undefined | null): string | null {
+  if (!d) return null;
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return null;
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const yyyy = dt.getFullYear();
+  const hh = String(dt.getHours()).padStart(2, "0");
+  const min = String(dt.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${yyyy} às ${hh}:${min}`;
 }
 
 /* ============ UI Básica ============ */
@@ -92,6 +106,7 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
   if (!open || !order) return null;
 
   const titleNumber = order.orderNumber ?? order.id;
+  const dateTime = formatDateTime(order.createdAt ?? order.created_at);
   const totalLabel =
     order.totalCents != null ? formatBRL(order.totalCents) : order.total ?? "";
 
@@ -106,13 +121,13 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center h-[100vh]"
       role="dialog"
       aria-modal="true"
     >
       {/* overlay */}
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute -inset-4 bg-black/40 "
         onClick={onClose}
         aria-hidden
       />
@@ -123,12 +138,15 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
         <div className="flex items-start justify-between p-6">
           <div className="space-y-1 text-left">
             <h2 className="text-2xl font-bold text-[#0f4c50]">
-              Pedido {titleNumber}
+              Pedido #{titleNumber}  <span className="text-gray-500 text-[14px] font-normal whitespace-nowrap">{dateTime || "—"}</span>
             </h2>
-            <p className="text-sm text-gray-700">
-              Mesa: <strong>{order.table ?? "—"}</strong> • Cliente:{" "}
-              <strong>{order.name ?? "—"}</strong>
-            </p>
+             
+            <div className="flex flex-wrap gap-4 text-md text-gray-700">
+              <span className="whitespace-nowrap">Mesa: <strong>{order.table ?? "—"}</strong></span>
+              <span className="whitespace-nowrap">Cliente: <strong>{order.name ?? "—"}</strong></span>
+              <span className="whitespace-nowrap">Telefone: <strong>{order.phone ?? "—"}</strong></span>
+            </div>
+            
           </div>
           <button
             onClick={onClose}
@@ -359,8 +377,9 @@ export default function PedidosContent() {
                 {/* Linha superior: Pedido + StatusPill */}
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-semibold text-[#0f4c50]">
-                    Pedido #{o.orderNumber ?? o.id}
+                    Pedido #{o.orderNumber ?? o.id} <span className="text-gray-500 text-sm font-normal whitespace-nowrap">{formatDateTime(o.createdAt ?? o.created_at) || "—"}</span>
                   </h3>
+                  
                   <StatusPill status={o.status} />
                 </div>
 
