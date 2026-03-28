@@ -5,6 +5,7 @@ const OPTIONS: { value: PtStatus; label: string }[] = [
   { value: "pendente",    label: "Pendente" },
   { value: "preparando",  label: "Preparando" },
   { value: "pronto",      label: "Pronto" },
+   { value: "pago",      label: "Pago" },
   { value: "enviado",     label: "Enviado" },
 ];
 
