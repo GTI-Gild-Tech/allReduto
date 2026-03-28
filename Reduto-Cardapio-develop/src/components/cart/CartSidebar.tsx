@@ -175,6 +175,17 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
                   placeholder="Ex.: 12, Retirada, Delivery..."
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-[#0f4c50]">
+                  Telefone (opcional)
+                </label>
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2"
+                  value={tableNumber}
+                  onChange={(e) => setTableNumber(e.target.value)}
+                  placeholder="para o registro no fidelidade"
+                />
+              </div>
             </div>
           )}
         </div>
