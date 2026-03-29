@@ -20,9 +20,17 @@ export function FidelidadeMobileView({ searchTerm, customers }: FidelidadeMobile
   const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
   const [isRedeemOpen, setIsRedeemOpen] = useState(false);
 
-  const filteredCustomers = customers.filter((customer) =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCustomers = customers.filter((customer) => {
+    const searchLower = searchTerm.toLowerCase();
+    const phoneDigitsOnly = customer.phone.replace(/\D/g, "");
+    const searchDigitsOnly = searchTerm.replace(/\D/g, "");
+    
+    return (
+      customer.name.toLowerCase().includes(searchLower) ||
+      customer.phone.toLowerCase().includes(searchLower) ||
+      (searchDigitsOnly.length > 0 && phoneDigitsOnly.includes(searchDigitsOnly))
+    );
+  });
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 

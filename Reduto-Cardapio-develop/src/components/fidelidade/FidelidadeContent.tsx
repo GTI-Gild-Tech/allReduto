@@ -27,7 +27,7 @@ function SearchIcon({ className }: { className?: string }) {
 }
 
 export function FidelidadeContent() {
-  const { customers } = useFidelidade();
+  const { customers, refreshCustomers } = useFidelidade();
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
@@ -106,6 +106,7 @@ export function FidelidadeContent() {
       <NewRecordModal
         isOpen={isNewRecordOpen}
         onClose={() => setIsNewRecordOpen(false)}
+        onSuccess={() => refreshCustomers()}
       />
     </div>
   );

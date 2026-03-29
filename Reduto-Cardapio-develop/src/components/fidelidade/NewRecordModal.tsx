@@ -10,6 +10,7 @@ interface NewRecordModalProps {
   isOpen: boolean;
   onClose: () => void;
   customerId?: string;
+  onSuccess?: () => void;
 }
 
 
@@ -18,8 +19,8 @@ function calcPoints(total: number) {
   return Math.round(total);
 }
 
-export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalProps) {
-  const { customers, getCustomerById, addPoints } = useFidelidade();
+export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRecordModalProps) {
+  const { customers, getCustomerById, addPoints, refreshCustomers } = useFidelidade();
   const { orders } = useOrders();
   
   const normalizeOrderInput = (value: string) => {
@@ -27,6 +28,36 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
     if (!trimmed) return "";
     const withoutHash = trimmed.replace(/^#+/, "");
     return `#${withoutHash}`;
+  };
+
+  const handleCustomerQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const digitsOnly = inputValue.replace(/\D/g, "");
+    
+    // Se contém letras, aceita como nome
+    if (/[a-záéíóúàâêüñ]/i.test(inputValue.replace(/[()\\s\\-]/g, ""))) {
+      setCustomerQuery(inputValue);
+      return;
+    }
+    
+    // Caso contrário, formata como telefone
+    if (digitsOnly.length > 11) return;
+    
+    let formatted = "";
+    if (digitsOnly.length === 0) {
+      formatted = "";
+    } else if (digitsOnly.length <= 2) {
+      formatted = `(${digitsOnly}`;
+    } else if (digitsOnly.length <= 7) {
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2)}`;
+    } else if (digitsOnly.length === 8) {
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)}-${digitsOnly.slice(6)}`;
+    } else if (digitsOnly.length === 9 || digitsOnly.length === 10) {
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 6)}-${digitsOnly.slice(6)}`;
+    } else if (digitsOnly.length === 11) {
+      formatted = `(${digitsOnly.slice(0, 2)}) ${digitsOnly.slice(2, 7)}-${digitsOnly.slice(7)}`;
+    }
+    setCustomerQuery(formatted);
   };
 
   /* ── customer search (when no customerId pre-set) ─────────────── */
@@ -69,8 +100,7 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
   const normalizedOrderQuery = orderQuery.replace(/^#/, "").toLowerCase().trim();
   const orderSuggestions = normalizedOrderQuery.length > 0
     ? orders.filter(o =>
-        String(o.id).toLowerCase().includes(normalizedOrderQuery) ||
-        (o.name ?? "").toLowerCase().includes(normalizedOrderQuery)
+        String(o.orderNumber).toLowerCase().includes(normalizedOrderQuery)
       ).slice(0, 6)
     : [];
 
@@ -99,7 +129,7 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
 
   const handleSelectOrder = (order: OrderUI) => {
     setSelectedOrder(order);
-    setOrderQuery(`#${order.id}`);
+    setOrderQuery(`#${order.orderNumber}`);
     setShowOrderSugg(false);
   };
 
@@ -136,6 +166,11 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
         source: "order",
       });
       toast.success(`${pts} pontos adicionados com sucesso!`);
+      
+      // Force refresh to ensure UI updates immediately
+      await refreshCustomers();
+      onSuccess?.();
+      
       handleCancel();
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
@@ -192,12 +227,23 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
             <div ref={customerRef} className="relative">
               <div className="relative rounded-lg border border-[#c0bab4]">
                 <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
-                  Cliente (Telefone)<span className="text-[#fd8d14] ml-0.5">*</span>
+                  Cliente (ou Telefone)<span className="text-[#fd8d14] ml-0.5">*</span>
                 </span>
-                {customerId ? (
-                  /* pre-selected: just show the name */
-                  <div className="px-4 py-3 text-[#333]">
-                    {customer?.name ?? "—"}
+                {activeCustomerId ? (
+                  /* pre-selected: just show the name with clear button */
+                  <div className="flex items-center justify-between px-4 py-3 text-[#333]">
+                    <span>{customer?.name ?? "—"}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResolvedCustomerId("");
+                        setCustomerQuery("");
+                        setShowCustomerSugg(false);
+                      }}
+                      className="text-sm text-[#797474] hover:text-[#0f4c50] transition-colors"
+                    >
+                      Alterar
+                    </button>
                   </div>
                 ) : (
                   <input
@@ -205,7 +251,7 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
                     placeholder="Digite o nome ou telefone do cliente"
                     value={customerQuery}
                     onChange={(e) => {
-                      setCustomerQuery(e.target.value);
+                      handleCustomerQueryChange(e);
                       setResolvedCustomerId("");
                       setShowCustomerSugg(true);
                     }}
@@ -277,7 +323,7 @@ export function NewRecordModal({ isOpen, onClose, customerId }: NewRecordModalPr
                     >
                       <div className="flex flex-col">
                         <span className="text-[#0f4c50]">
-                          Pedido <strong>{order.id}</strong>
+                          Pedido <strong>{order.orderNumber}</strong>
                           <span className="text-[#797474] ml-1 text-[13px]">· {order.name ?? "Sem nome"}</span>
                         </span>
                         <span className="text-[11px] text-[#aaa]">{order.createdAt ?? "-"}</span>
