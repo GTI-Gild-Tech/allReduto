@@ -245,7 +245,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
                   className="rounded w-full  px-4 py-2 text-gray-800 bg-stone-200 hover:bg-stone-300"
                   onClick={onClose}
                 >
-                  Fechar carrinho
+                  Voltar ao Cardapio
                 </button>
                 
                 <button
@@ -256,7 +256,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
                   onClick={goToDetails}
                   disabled={!canContinue}
                 >
-                  Fechar pedido
+                  Finalizar pedido
                 </button>
             </div>
           ) : (
