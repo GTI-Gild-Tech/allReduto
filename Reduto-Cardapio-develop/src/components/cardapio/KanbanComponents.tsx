@@ -105,14 +105,14 @@ const formatPrices = () =>
   return (
     <div
       ref={ref}
-      className={`bg-[#e4ddcd] box-border content-stretch flex flex-col gap-2 items-start justify-start px-[15px] py-5 relative rounded-[8px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.12),0px_16px_32px_0px_rgba(0,0,0,0.08)] shrink-0 w-80 cursor-move transition-all duration-200 ${
+      className={`bg-[#e4ddcd] box-border content-stretch flex flex-col gap-1 items-start justify-start px-[15px] py-3 relative rounded-[8px] shadow-[0px_4px_8px_0px_rgba(0,0,0,0.12),0px_16px_32px_0px_rgba(0,0,0,0.08)] shrink-0 w-80 cursor-move transition-all duration-200 ${
         isDragging ? 'opacity-50 rotate-1 scale-105' : 'hover:shadow-lg'
       }`}
     >
       {/* Product name */}
       <div className="content-stretch flex gap-2 items-center justify-start relative shrink-0 w-[259px]">
-        <div className="font-['Rethink_Sans:SemiBold',_sans-serif] font-semibold relative shrink-0 text-[#0f4c50] text-[24px] w-full">
-          <p className="leading-[1.5] line-clamp-2">{product.name}</p>
+        <div className="font-['Rethink_Sans:SemiBold',_sans-serif] font-semibold relative shrink-0 text-[#0f4c50] text-[20px] w-full">
+          <p className="leading-[1.1] line-clamp-2">{product.name}</p>
         </div>
       </div>
 
@@ -185,8 +185,8 @@ export function KanbanColumn({ title, category, products, onMove, onReorder, onE
     >
       <div className="box-border content-stretch flex flex-col gap-4 items-center justify-start overflow-clip p-[24px] relative">
         <div className="flex justify-between items-start w-full min-w-full group">
-          <div className="font-['Rethink_Sans:Bold',_sans-serif] font-bold leading-[0] relative shrink-0 text-[#0f4c50] text-[37px]" style={{ width: "min-content" }}>
-            <p className="leading-[44px]">{title}</p>
+          <div className="font-['Rethink_Sans:Bold',_sans-serif] font-bold leading-[0] relative text-[#0f4c50] text-[37px] flex-1 pr-4">
+            <p className="leading-[44px] break-words">{title}</p>
           </div>
           {onEditCategory && (
             <button

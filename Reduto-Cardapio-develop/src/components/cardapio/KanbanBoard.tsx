@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Cropper from "react-easy-crop";
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from "react-dnd-html5-backend";
@@ -777,6 +777,48 @@ export function KanbanBoard() {
   const [editingCategory, setEditingCategory] = useState<string>('');
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  // Refs para sincronizar scroll horizontal no topo e no conteúdo
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollInnerRef = useRef<HTMLDivElement>(null);
+  const [contentWidth, setContentWidth] = useState(0);
+
+  // Sincronizar scroll entre o topo e o conteúdo principal
+  const handleMainScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (topScrollRef.current) {
+      topScrollRef.current.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
+    }
+  }, []);
+
+  const handleTopScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = (e.target as HTMLDivElement).scrollLeft;
+    }
+  }, []);
+
+  // Sincronizar largura do elemento interno da barra de scroll com o conteúdo
+  useEffect(() => {
+    const updateContentWidth = () => {
+      if (scrollContainerRef.current && topScrollInnerRef.current) {
+        const width = scrollContainerRef.current.scrollWidth;
+        setContentWidth(width);
+        topScrollInnerRef.current.style.width = width + 'px';
+      }
+    };
+
+    updateContentWidth();
+    window.addEventListener('resize', updateContentWidth);
+    const observer = new ResizeObserver(updateContentWidth);
+    if (scrollContainerRef.current) {
+      observer.observe(scrollContainerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateContentWidth);
+      observer.disconnect();
+    };
+  }, [categories]);
+
   // Garantir que todas as categorias sejam sempre visíveis
   useEffect(() => {
     // Este efeito garante que quando as categorias mudarem, 
@@ -970,31 +1012,51 @@ export function KanbanBoard() {
         </div>
 
         {/* Kanban Columns */}
-        <div className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto pt-1">
-          {categories.map((category, index) => {
-            const categoryProducts = products
-              .filter(p => p.category === category)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-            const canDeleteCategory = categories.length > 1 && categoryProducts.length === 0;
-            
-            return (
-              <DraggableCategoryColumn
-                key={category}
-                title={category}
-                category={category}
-                index={index}
-                products={categoryProducts}
-                onMove={handleMoveProduct}
-                onReorder={handleReorderProducts}
-                onEdit={handleEditProduct}
-                onDelete={handleDeleteProduct}
-                onDeleteCategory={canDeleteCategory ? handleDeleteCategory : undefined}
-                onEditCategory={handleEditCategory}
-                canDeleteCategory={canDeleteCategory}
-                onReorderCategory={handleReorderCategories}
-              />
-            );
-          })}
+        <div className="relative shrink-0 w-full">
+          {/* Top scroll bar */}
+          <div
+            ref={topScrollRef}
+            onScroll={handleTopScroll}
+            className="w-full overflow-x-scroll overflow-y-hidden mb-2 bg-[#f0f0f0] rounded-md"
+            style={{ height: '12px', scrollbarWidth: 'auto' }}
+          >
+            <div 
+              ref={topScrollInnerRef}
+              style={{ height: '1px', width: contentWidth || '100%' }} 
+            />
+          </div>
+
+          {/* Main content */}
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleMainScroll}
+            className="content-stretch flex gap-6 items-start justify-start relative shrink-0 w-full overflow-x-auto pt-1"
+          >
+            {categories.map((category, index) => {
+              const categoryProducts = products
+                .filter(p => p.category === category)
+                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+              const canDeleteCategory = categories.length > 1 && categoryProducts.length === 0;
+              
+              return (
+                <DraggableCategoryColumn
+                  key={category}
+                  title={category}
+                  category={category}
+                  index={index}
+                  products={categoryProducts}
+                  onMove={handleMoveProduct}
+                  onReorder={handleReorderProducts}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onDeleteCategory={canDeleteCategory ? handleDeleteCategory : undefined}
+                  onEditCategory={handleEditCategory}
+                  canDeleteCategory={canDeleteCategory}
+                  onReorderCategory={handleReorderCategories}
+                />
+              );
+            })}
+          </div>
         </div>
 
         {/* Edit Product Modal */}
