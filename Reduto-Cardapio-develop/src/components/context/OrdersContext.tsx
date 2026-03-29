@@ -38,6 +38,7 @@ export type OrderUI = {
 
 type CreateFromCartParams = {
   name: string;
+  phone?: string;
   table: string | number;
   items: Array<{
     productId: string | number;
@@ -212,25 +213,28 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const createOrderFromCart = useCallback(
   async (params: CreateFromCartParams): Promise<OrderUI> => {
-    const { name, table, items } = params;
+    const { name, phone, table, items } = params;
 
     const total = items.reduce(
       (acc, it) => acc + (it.unitPriceCents * it.quantity) / 100,
       0
     );
-const phoneOnly = String(name ?? "").replace(/\D/g, "");
+
+    const phoneDigits = String(phone ?? "").replace(/\D/g, "");
+
     try {
       const { data: order, error: orderError } = await supabase
-  .from("orders")
-  .insert({
-    customer_name: phoneOnly,
-    customer_phone: phoneOnly,
-    table_number: String(table),
-    status: "pending",
-    total,
-  })
-  .select()
-  .single();
+        .from("orders")
+        .insert({
+          customer_name: name?.trim() || null,
+          customer_phone: phone?.trim() || null,
+          customer_phone_digits: phoneDigits || null,
+          table_number: String(table ?? "").trim() || null,
+          status: "pending",
+          total,
+        })
+        .select()
+        .single();
 
       if (orderError) throw orderError;
 
@@ -272,8 +276,7 @@ const phoneOnly = String(name ?? "").replace(/\D/g, "");
           ? String(err.message)
           : "Não conseguimos salvar seu pedido. Tente novamente.";
 
-      const e = new Error(userMsg);
-      throw e;
+      throw new Error(userMsg);
     }
   },
   []

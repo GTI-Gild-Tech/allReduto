@@ -48,7 +48,10 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
     [cartItems]
   );
 
-  const canFinish = cartItems.length > 0 && !!customerName.trim();
+  const canFinish =
+  cartItems.length > 0 &&
+  !!customerName.trim() &&
+  !!phoneNumber.replace(/\D/g, "");
   const canContinue = cartItems.length > 0;
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,15 +96,17 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
     try {
       setSaving(true);
       await createOrderFromCart({
-        name: customerName.trim(),
-        table: tableNumber.trim(),
-        items: cartItems.map((it) => ({
-          productId: it.productId,          // <- do carrinho
-          size: it.size,
-          quantity: Number(it.quantity || 0),
-          unitPriceCents: Number(it.unitPriceCents || 0),
-        })),
-      });
+  name: customerName.trim(),
+  phone: phoneNumber.trim(),
+  table: tableNumber.trim(),
+  items: cartItems.map((it) => ({
+    productId: it.productId,
+    name: it.name,
+    size: it.size,
+    quantity: Number(it.quantity || 0),
+    unitPriceCents: Number(it.unitPriceCents || 0),
+  })),
+});
 
       clearCart();
       setShowOrderSuccess(true);
@@ -251,7 +256,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
                   onClick={goToDetails}
                   disabled={!canContinue}
                 >
-                  Continuar pedindo
+                  Fechar pedido
                 </button>
             </div>
           ) : (

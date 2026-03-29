@@ -49,6 +49,13 @@ const formatBRL = (v?: number | null) =>
     { style: "currency", currency: "BRL" }
   );
 
+  function getOrderItemsCount(items?: { quantity?: number }[]) {
+  return (items ?? []).reduce(
+    (acc, item) => acc + Number(item.quantity ?? 0),
+    0
+  );
+}
+
 /** Converte Date/string/number -> "YYYY-MM-DD" no fuso local */
 function toYMDLocal(d: Date | string | number | undefined | null): string | null {
   if (!d) return null;
@@ -368,7 +375,7 @@ export default function PedidosContent() {
           </button>
         </div>
       ) : (
-        filteredOrders.map((o) => {
+        filteredOrders.map((o,it) => {
           const totalLabel =
             o.totalCents != null ? formatBRL(o.totalCents) : o.total ?? "";
           return (
@@ -393,9 +400,9 @@ export default function PedidosContent() {
                     <span>
                       Mesa: <strong>{o.table || "—"}</strong>
                     </span>
-                    <span>
-                      Itens: <strong>{o.items?.length ?? 0}</strong>
-                    </span>
+                
+                      <span>Itens: <strong>{getOrderItemsCount(o.items)}</strong></span>
+                
                     <span>
                       Total: <strong>{totalLabel}</strong>
                     </span>
