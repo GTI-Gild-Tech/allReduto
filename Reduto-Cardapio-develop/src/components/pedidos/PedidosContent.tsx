@@ -7,6 +7,13 @@ import type { PtStatus } from "../../services/status";
 import { TitleCommon } from "../shared/TitleCommon";
 import ConfirmDialog from "../shared/ConfirmDialog";
 import bellSound from "../../assets/bell.mp3";
+import { ArrowDownWideNarrow, Plus, SearchIcon } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@radix-ui/react-dropdown-menu";
+import { DropdownMenuTrigger } from "../ui/dropdown-menu";
 
 /* =========================
    Tipos (ampliados p/ modal)
@@ -46,18 +53,20 @@ type OrderUI = {
 const formatBRL = (v?: number | null) =>
   (Number.isFinite(v as number) ? (v as number) / 100 : 0).toLocaleString(
     "pt-BR",
-    { style: "currency", currency: "BRL" }
+    { style: "currency", currency: "BRL" },
   );
 
-  function getOrderItemsCount(items?: { quantity?: number }[]) {
+function getOrderItemsCount(items?: { quantity?: number }[]) {
   return (items ?? []).reduce(
     (acc, item) => acc + Number(item.quantity ?? 0),
-    0
+    0,
   );
 }
 
 /** Converte Date/string/number -> "YYYY-MM-DD" no fuso local */
-function toYMDLocal(d: Date | string | number | undefined | null): string | null {
+function toYMDLocal(
+  d: Date | string | number | undefined | null,
+): string | null {
   if (!d) return null;
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return null;
@@ -68,7 +77,9 @@ function toYMDLocal(d: Date | string | number | undefined | null): string | null
 }
 
 /** Formata data/hora para "DD/MM/YYYY HH:MM" */
-function formatDateTime(d: Date | string | number | undefined | null): string | null {
+function formatDateTime(
+  d: Date | string | number | undefined | null,
+): string | null {
   if (!d) return null;
   const dt = new Date(d);
   if (isNaN(dt.getTime())) return null;
@@ -82,7 +93,9 @@ function formatDateTime(d: Date | string | number | undefined | null): string | 
 
 /* ============ UI Básica ============ */
 function ActionButton(
-  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "solid" | "outline" }
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: "solid" | "outline";
+  },
 ) {
   const { className = "", variant = "outline", ...rest } = props;
   const base =
@@ -115,7 +128,9 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
   const titleNumber = order.orderNumber ?? order.id;
   const dateTime = formatDateTime(order.createdAt ?? order.created_at);
   const totalLabel =
-    order.totalCents != null ? formatBRL(order.totalCents) : order.total ?? "";
+    order.totalCents != null
+      ? formatBRL(order.totalCents)
+      : (order.total ?? "");
 
   // cálculo de subtotal por item (se houver preço unitário)
   const getUnit = (it?: OrderItemUI) =>
@@ -145,15 +160,23 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
         <div className="flex items-start justify-between p-6">
           <div className="space-y-1 text-left">
             <h2 className="text-2xl font-bold text-[#0f4c50]">
-              Pedido #{titleNumber}  <span className="text-gray-500 text-[14px] font-normal whitespace-nowrap">{dateTime || "—"}</span>
+              Pedido #{titleNumber}{" "}
+              <span className="text-gray-500 text-[14px] font-normal whitespace-nowrap">
+                {dateTime || "—"}
+              </span>
             </h2>
-             
+
             <div className="flex flex-wrap gap-4 text-md text-gray-700">
-              <span className="whitespace-nowrap">Mesa: <strong>{order.table ?? "—"}</strong></span>
-              <span className="whitespace-nowrap">Cliente: <strong>{order.name ?? "—"}</strong></span>
-              <span className="whitespace-nowrap">Telefone: <strong>{order.phone ?? "—"}</strong></span>
+              <span className="whitespace-nowrap">
+                Mesa: <strong>{order.table ?? "—"}</strong>
+              </span>
+              <span className="whitespace-nowrap">
+                Cliente: <strong>{order.name ?? "—"}</strong>
+              </span>
+              <span className="whitespace-nowrap">
+                Telefone: <strong>{order.phone ?? "—"}</strong>
+              </span>
             </div>
-            
           </div>
           <button
             onClick={onClose}
@@ -188,7 +211,8 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
                   >
                     <div className="text-start">
                       <div className="font-medium text-gray-800">
-                        {(it.name ?? "Item")}{size ? ` (${size})` : ""}
+                        {it.name ?? "Item"}
+                        {size ? ` (${size})` : ""}
                       </div>
                       {(size || category) && (
                         <div className="mt-1 text-[13px] text-gray-600">
@@ -200,15 +224,21 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
                     <div className="text-center text-gray-800">
                       {it.quantity ?? 0}
                     </div>
-                    <div className="text-center text-gray-800">{getUnit(it)}</div>
-                    <div className="text-center text-gray-800">{getSub(it)}</div>
+                    <div className="text-center text-gray-800">
+                      {getUnit(it)}
+                    </div>
+                    <div className="text-center text-gray-800">
+                      {getSub(it)}
+                    </div>
                   </div>
                 );
               })}
 
               {/* Total */}
               <div className="flex items-center justify-end gap-6 px-4 py-5">
-                <div className="text-right text-[15px] text-gray-600">Total</div>
+                <div className="text-right text-[15px] text-gray-600">
+                  Total
+                </div>
                 <div className="text-2xl font-extrabold text-[#0f4c50]">
                   {totalLabel || "—"}
                 </div>
@@ -230,27 +260,27 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
 
 /* ============ Página ============ */
 export default function PedidosContent() {
-  const {
-    orders: rawOrders,
-    updateOrderStatus,
-    refresh,
-  } = useOrders();
+  const { orders: rawOrders, updateOrderStatus, refresh } = useOrders();
 
   const orders = (rawOrders ?? []) as OrderUI[];
 
   const [savingId, setSavingId] = React.useState<string | number | null>(null);
   const isSaving = (id: string | number) => savingId === id;
 
-  const [confirmId, setConfirmId] = React.useState<string | number | null>(null);
-  const [openMenuId, setOpenMenuId] = React.useState<string | number | null>(null);
+  const [confirmId, setConfirmId] = React.useState<string | number | null>(
+    null,
+  );
+  const [openMenuId, setOpenMenuId] = React.useState<string | number | null>(
+    null,
+  );
   const [previousOrderCount, setPreviousOrderCount] = React.useState(0);
 
   // Pré-carrega o áudio para garantir reprodução rápida
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  
+
   React.useEffect(() => {
     audioRef.current = new Audio(bellSound);
-    audioRef.current.preload = 'auto';
+    audioRef.current.preload = "auto";
   }, []);
 
   // Função para tocar som de notificação (arquivo MP3)
@@ -259,7 +289,10 @@ export default function PedidosContent() {
       if (audioRef.current) {
         audioRef.current.currentTime = 0; // Reinicia o áudio
         audioRef.current.play().catch((err) => {
-          console.error("[PedidosContent] Erro ao tocar som de notificação:", err);
+          console.error(
+            "[PedidosContent] Erro ao tocar som de notificação:",
+            err,
+          );
         });
       }
     } catch (err) {
@@ -283,48 +316,70 @@ export default function PedidosContent() {
   // Detecta novos pedidos e toca som
   React.useEffect(() => {
     const currentCount = orders.length;
-    
+
     if (previousOrderCount > 0 && currentCount > previousOrderCount) {
-      console.log("[PedidosContent] Novo pedido detectado! Tocando notificação...");
+      console.log(
+        "[PedidosContent] Novo pedido detectado! Tocando notificação...",
+      );
       playNotificationSound();
     }
-    
+
     setPreviousOrderCount(currentCount);
   }, [orders.length, previousOrderCount, playNotificationSound]);
 
-
   // filtro de data
   const [selectedDate, setSelectedDate] = React.useState<string>(""); // YYYY-MM-DD
+
+  // filtro de telefone
+  const [filterMode, setFilterMode] = React.useState<string | null>(null); // "phone" ou null
+  const [phoneFilter, setPhoneFilter] = React.useState<string>("");
+
   const filteredOrders = React.useMemo(() => {
-    if (!selectedDate) return orders;
-    return orders.filter((o) => {
-      const orderYMD =
-        toYMDLocal(o.createdAt) ??
-        toYMDLocal(o.created_at) ??
-        toYMDLocal(o.updatedAt) ??
-        toYMDLocal(o.updated_at);
-      if (!orderYMD) return true;
-      return orderYMD === selectedDate;
-    });
-  }, [orders, selectedDate]);
+    let result = orders;
+
+    // Filtro por data
+    if (selectedDate) {
+      result = result.filter((o) => {
+        const orderYMD =
+          toYMDLocal(o.createdAt) ??
+          toYMDLocal(o.created_at) ??
+          toYMDLocal(o.updatedAt) ??
+          toYMDLocal(o.updated_at);
+        if (!orderYMD) return true;
+        return orderYMD === selectedDate;
+      });
+    }
+
+    // Filtro por telefone
+    if (filterMode === "phone" && phoneFilter.trim()) {
+      const digitsOnly = phoneFilter.replace(/\D/g, "");
+      result = result.filter((o) => {
+        const orderPhoneDigits = (o.phone ?? "").replace(/\D/g, "");
+        return orderPhoneDigits.includes(digitsOnly);
+      });
+    }
+
+    return result;
+  }, [orders, selectedDate, filterMode, phoneFilter]);
 
   // modal
   const [openModal, setOpenModal] = React.useState(false);
-  const [selectedOrder, setSelectedOrder] = React.useState<OrderUI | null>(null);
+  const [selectedOrder, setSelectedOrder] = React.useState<OrderUI | null>(
+    null,
+  );
   const handleViewOrder = (order: OrderUI) => {
     setSelectedOrder(order);
     setOpenModal(true);
   };
   async function handleConfirmCancel(id: string | number) {
-  try {
-    setSavingId(id);
-    await updateOrderStatus(id, "cancelado");
-  } finally {
-    setSavingId(null);
-    setConfirmId(null);
+    try {
+      setSavingId(id);
+      await updateOrderStatus(id, "cancelado");
+    } finally {
+      setSavingId(null);
+      setConfirmId(null);
+    }
   }
-}
-
 
   return (
     <div className="space-y-4 flex-col items-center justify-center text-center self-center xl:mx-[20%] lg:mx-[10%] md:mx-[20px] mx-5">
@@ -361,8 +416,68 @@ export default function PedidosContent() {
         >
           Atualizar
         </button>
-      </div>
+        <div className="flex flex-row items-center gap-2 justify-center flex-nowrap">
+          <div className="relative shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="bg-[#696969] hover:bg-[#444444] transition-colors text-white px-2 py-2 text-[13px] rounded-[5px] h-[36.8px] flex">
+                  <ArrowDownWideNarrow />
+                  {filterMode === "phone" && (
+                    <div className="font-medium">Telefone</div>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                className="z-100 bg-white text-sm min-w-[100px] shadow-[0px_10px_38px_-10px_rgba(22,_23,_24,_0.35),_0px_10px_20px_-15px_rgba(22,_23,_24,_0.2)] rounded-[6px] p-1"
+                sideOffset={5}
+              >
+                <div className="font-medium py-1">
+                  {filterMode === "phone" ? "Filtros ativos:" : "Filtrar por:"}
+                </div>
+                <DropdownMenuItem
+                  className="cursor-pointer hover:bg-slate-100 py-2 px-2 text-start"
+                  onClick={() => {
+                    setFilterMode(filterMode === "phone" ? null : "phone");
+                    setPhoneFilter("");
+                  }}
+                >
+                  {filterMode === "phone" ? "Apagar filtro" : "Telefone"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
+          {filterMode === "phone" && (
+            <>
+              <div className="bg-[rgba(248,248,248,0.75)] border-[#b5b5b5] border-solid box-border flex flex-row items-center px-[15px] py-[6px] relative rounded-[5px] border flex-1 min-w-0">
+                <input
+                  type="text"
+                  placeholder="Digite o telefone do cliente"
+                  value={phoneFilter}
+                  onChange={(e) => setPhoneFilter(e.target.value)}
+                  className="border-none outline-none text-black placeholder-[#797474] bg-transparent w-full"
+                />
+              </div>
+              {/* Search button */}
+              <button
+                onClick={() => {}}
+                className="-ms-2 bg-[#0f4c50] hover:bg-[#0d4247] transition-colors items-center justify-center w-[37px] h-[37px] rounded-md shrink-0 cursor-pointer hidden md:flex"
+              >
+                <SearchIcon className="w-5 h-5 text-white" />
+              </button>
+
+              {phoneFilter && (
+                <button
+                  onClick={() => setPhoneFilter("")}
+                  className="bg-[#797474] hover:bg-[#6a6a6a] transition-colors text-white px-3 py-2 text-[13px] rounded-[5px] h-[36.8px] shrink-0"
+                >
+                  Limpar
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
       {/* Lista de pedidos */}
       {!filteredOrders.length ? (
         <div className="p-6 text-gray-600">
@@ -375,18 +490,24 @@ export default function PedidosContent() {
           </button>
         </div>
       ) : (
-        filteredOrders.map((o,it) => {
+        filteredOrders.map((o, it) => {
           const totalLabel =
-            o.totalCents != null ? formatBRL(o.totalCents) : o.total ?? "";
+            o.totalCents != null ? formatBRL(o.totalCents) : (o.total ?? "");
           return (
-            <div key={o.id} className="rounded-lg border-[#0f4c50] bg-white p-4 shadow-sm">
+            <div
+              key={o.id}
+              className="rounded-lg border-[#0f4c50] bg-white p-4 shadow-sm"
+            >
               <div className="flex flex-col">
                 {/* Linha superior: Pedido + StatusPill */}
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#0f4c50]">
-                    Pedido #{o.orderNumber ?? o.id} <span className="text-gray-500 text-sm font-normal whitespace-nowrap">{formatDateTime(o.createdAt ?? o.created_at) || "—"}</span>
+                  <h3 className="text-lg font-semibold text-[#0f4c50] text-start">
+                    Pedido #{o.orderNumber ?? o.id}{" "}
+                    <span className="text-gray-500 text-sm font-normal whitespace-nowrap">
+                      {formatDateTime(o.createdAt ?? o.created_at) || "—"}
+                    </span>
                   </h3>
-                  
+
                   <StatusPill status={o.status} />
                 </div>
 
@@ -400,16 +521,18 @@ export default function PedidosContent() {
                     <span>
                       Mesa: <strong>{o.table || "—"}</strong>
                     </span>
-                
-                      <span>Itens: <strong>{getOrderItemsCount(o.items)}</strong></span>
-                
+
+                    <span>
+                      Itens: <strong>{getOrderItemsCount(o.items)}</strong>
+                    </span>
+
                     <span>
                       Total: <strong>{totalLabel}</strong>
                     </span>
                   </div>
 
                   {/* Ações da direita */}
-                  <div className="flex items-center gap-2 relative justify-end">
+                  <div className="flex items-center gap-2 justify-end">
                     <span className="text-sm text-gray-600">Status</span>
                     <StatusSelect
                       value={o.status}
@@ -429,29 +552,30 @@ export default function PedidosContent() {
                     </ActionButton>
 
                     <ActionButton
-                          onClick={() => {
-                            updateOrderStatus(o.id, "pronto");
-                            setOpenMenuId(null);
-                          }}
-                          disabled={isSaving(o.id)}
-                          className="hidden xs:block md:w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors first:rounded-t-lg"
-                        >
-                          Marcar como pronto
-                      </ActionButton>
+                      onClick={() => {
+                        updateOrderStatus(o.id, "pronto");
+                        setOpenMenuId(null);
+                      }}
+                      disabled={isSaving(o.id)}
+                      className="hidden xs:block md:w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors first:rounded-t-lg"
+                    >
+                      Marcar como pronto
+                    </ActionButton>
 
                     {/* Menu de 3 pontos */}
                     <div className="relative">
                       <button
-                        onClick={() => setOpenMenuId(openMenuId === o.id ? null : o.id)}
+                        onClick={() =>
+                          setOpenMenuId(openMenuId === o.id ? null : o.id)
+                        }
                         className="rounded px-2 py-1 text-gray-600 hover:bg-gray-100 transition-colors"
                         title="Mais opções"
                       >
                         ⋯
                       </button>
-                      
+
                       {openMenuId === o.id && (
                         <div className="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-10 min-w-[180px]">
-                          
                           <button
                             onClick={() => {
                               setConfirmId(o.id);
