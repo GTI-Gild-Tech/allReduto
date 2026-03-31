@@ -306,6 +306,11 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             : o
         )
       );
+
+      // 👇 dispara atualização do fidelidade
+      if (data.status === "paid") {
+        window.dispatchEvent(new CustomEvent("loyalty-refresh"));
+      }
     } catch (err: any) {
       console.error("[OrdersContext] updateOrderStatus error:", err);
       throw err;

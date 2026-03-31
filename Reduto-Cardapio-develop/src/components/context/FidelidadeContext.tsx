@@ -202,6 +202,17 @@ export function FidelidadeProvider({ children }: PropsWithChildren) {
     setCustomers(mapped);
     setLoading(false);
   }, []);
+  useEffect(() => {
+  const handleRefresh = () => {
+    refreshCustomers();
+  };
+
+  window.addEventListener("loyalty-refresh", handleRefresh);
+
+  return () => {
+    window.removeEventListener("loyalty-refresh", handleRefresh);
+  };
+}, [refreshCustomers]);
 
   useEffect(() => {
   refreshCustomers().catch((err) => {

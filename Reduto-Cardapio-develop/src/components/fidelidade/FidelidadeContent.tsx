@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState,  useEffect } from "react";
 import { useFidelidade } from "../context/FidelidadeContext";
 import { FidelidadeTable } from "./FidelidadeTable";
 import { FidelidadeMobileView } from "./FidelidadeMobileView";
@@ -31,6 +31,18 @@ export function FidelidadeContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewCustomerOpen, setIsNewCustomerOpen] = useState(false);
   const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
+
+  useEffect(() => {
+  const handleRefresh = () => {
+    refreshCustomers();
+  };
+
+  window.addEventListener("loyalty-refresh", handleRefresh);
+
+  return () => {
+    window.removeEventListener("loyalty-refresh", handleRefresh);
+  };
+}, [refreshCustomers]);
 
   return (
     <div
