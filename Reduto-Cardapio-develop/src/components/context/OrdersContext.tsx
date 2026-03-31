@@ -3,7 +3,6 @@ import React, {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   ReactNode,
@@ -30,6 +29,7 @@ export type OrderUI = {
   orderNumber?: string;
   createdAt?: string;
   name?: string;
+  phone?: string;
   table?: string | number;
   items?: OrderItemUI[];
   totalCents?: number;
@@ -89,6 +89,8 @@ function formatOrderDTO(dto: any): OrderUI {
   const customer = dto?.customer ?? dto?.Customer ?? {};
   const customerName =
     customer?.name ?? dto?.customer_name ?? dto?.name ?? "";
+  const phone =
+    customer?.phone ?? dto?.customer_phone ?? dto?.phone ?? "";
   const table =
     customer?.table_number ??
     customer?.table ??
@@ -147,14 +149,14 @@ function formatOrderDTO(dto: any): OrderUI {
     dto?.created_at ?? dto?.createdAt ?? dto?.created_at?.toString?.() ?? "";
 
   const totalCents =
-  dto?.total_cents != null
-    ? Number(dto.total_cents) || 0
-    : dto?.total != null
-    ? Math.round(Number(dto.total) * 100)
-    : Number(
-        dto?.totalCents ??
-        Math.round(items.reduce((acc, it) => acc + (it.subtotalCents ?? 0), 0))
-      ) || 0;
+    dto?.total_cents != null
+      ? Number(dto.total_cents) || 0
+      : dto?.total != null
+      ? Math.round(Number(dto.total) * 100)
+      : Number(
+          dto?.totalCents ??
+            Math.round(items.reduce((acc, it) => acc + (it.subtotalCents ?? 0), 0))
+        ) || 0;
 
   const statusApi =
     dto?.status ??
@@ -170,6 +172,7 @@ function formatOrderDTO(dto: any): OrderUI {
     orderNumber: String(dto?.order_number ?? id ?? ""),
     createdAt,
     name: customerName || "",
+    phone: phone || "",
     table: table || "",
     items,
     totalCents,
@@ -187,190 +190,189 @@ export const OrdersProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   const refresh = useCallback(async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        order_items (*)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    const mapped = (data ?? []).map(formatOrderDTO);
-    setOrders(mapped);
-  } catch (err: any) {
-    setError(err?.message ?? "Erro ao carregar pedidos");
-    setShowErrorPopup(true);
-  } finally {
-    setLoading(false);
-  }
-}, []);
-
-  const createOrderFromCart = useCallback(
-  async (params: CreateFromCartParams): Promise<OrderUI> => {
-    const { name, phone, table, items } = params;
-
-    const total = items.reduce(
-      (acc, it) => acc + (it.unitPriceCents * it.quantity) / 100,
-      0
-    );
-
-    const phoneDigits = String(phone ?? "").replace(/\D/g, "");
+    setLoading(true);
+    setError(null);
 
     try {
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          customer_name: name?.trim() || null,
-          customer_phone: phone?.trim() || null,
-          customer_phone_digits: phoneDigits || null,
-          table_number: String(table ?? "").trim() || null,
-          status: "pending",
-          total,
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItemsPayload = items.map((it) => ({
-        order_id: order.id,
-        product_id: it.productId,
-        product_name: it.name ?? null,
-        size: it.size ?? null,
-        quantity: it.quantity,
-        unit_price: it.unitPriceCents / 100,
-        line_total: (it.unitPriceCents * it.quantity) / 100,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItemsPayload);
-
-      if (itemsError) throw itemsError;
-
-      const { data: fullOrder, error: reloadError } = await supabase
+      const { data, error } = await supabase
         .from("orders")
         .select(`
           *,
           order_items (*)
         `)
-        .eq("id", order.id)
-        .single();
-
-      if (reloadError) throw reloadError;
-
-      const formatted = formatOrderDTO(fullOrder);
-      setOrders((prev) => [formatted, ...prev]);
-      return formatted;
-    } catch (err: any) {
-      console.error("[OrdersContext] createOrderFromCart error:", err);
-
-      const userMsg =
-        err?.message && String(err.message).trim().length > 0
-          ? String(err.message)
-          : "Não conseguimos salvar seu pedido. Tente novamente.";
-
-      throw new Error(userMsg);
-    }
-  },
-  []
-);
-
- const updateOrderStatus = useCallback(
-  async (id: number | string, newStatusPt: PtStatus) => {
-    const status = toApiStatus(newStatusPt);
-
-    try {
-      const { data, error } = await supabase
-        .from("orders")
-        .update({ status })
-        .eq("id", id)
-        .select()
-        .single();
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === id
-            ? {
-                ...o,
-                status: fromApiStatus(data.status),
-              }
-            : o
-        )
+      const mapped = (data ?? []).map(formatOrderDTO);
+      setOrders(mapped);
+    } catch (err: any) {
+      setError(err?.message ?? "Erro ao carregar pedidos");
+      setShowErrorPopup(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const createOrderFromCart = useCallback(
+    async (params: CreateFromCartParams): Promise<OrderUI> => {
+      const { name, phone, table, items } = params;
+
+      const total = items.reduce(
+        (acc, it) => acc + (it.unitPriceCents * it.quantity) / 100,
+        0
       );
 
-      // 👇 dispara atualização do fidelidade
-      if (data.status === "paid") {
-        window.dispatchEvent(new CustomEvent("loyalty-refresh"));
+      const phoneDigits = String(phone ?? "").replace(/\D/g, "");
+
+      try {
+        const { data: order, error: orderError } = await supabase
+          .from("orders")
+          .insert({
+            customer_name: name?.trim() || null,
+            customer_phone: phone?.trim() || null,
+            customer_phone_digits: phoneDigits || null,
+            table_number: String(table ?? "").trim() || null,
+            status: "pending",
+            total,
+          })
+          .select()
+          .single();
+
+        if (orderError) throw orderError;
+
+        const orderItemsPayload = items.map((it) => ({
+          order_id: order.id,
+          product_id: it.productId,
+          product_name: it.name ?? null,
+          size: it.size ?? null,
+          quantity: it.quantity,
+          unit_price: it.unitPriceCents / 100,
+          line_total: (it.unitPriceCents * it.quantity) / 100,
+        }));
+
+        const { error: itemsError } = await supabase
+          .from("order_items")
+          .insert(orderItemsPayload);
+
+        if (itemsError) throw itemsError;
+
+        const { data: fullOrder, error: reloadError } = await supabase
+          .from("orders")
+          .select(`
+            *,
+            order_items (*)
+          `)
+          .eq("id", order.id)
+          .single();
+
+        if (reloadError) throw reloadError;
+
+        const formatted = formatOrderDTO(fullOrder);
+        setOrders((prev) => [formatted, ...prev]);
+        return formatted;
+      } catch (err: any) {
+        console.error("[OrdersContext] createOrderFromCart error:", err);
+
+        const userMsg =
+          err?.message && String(err.message).trim().length > 0
+            ? String(err.message)
+            : "Não conseguimos salvar seu pedido. Tente novamente.";
+
+        throw new Error(userMsg);
       }
-    } catch (err: any) {
-      console.error("[OrdersContext] updateOrderStatus error:", err);
-      throw err;
-    }
-  },
-  []
-);
+    },
+    []
+  );
+
+  const updateOrderStatus = useCallback(
+    async (id: number | string, newStatusPt: PtStatus) => {
+      const status = toApiStatus(newStatusPt);
+
+      try {
+        const { data, error } = await supabase
+          .from("orders")
+          .update({ status })
+          .eq("id", id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  status: fromApiStatus(data.status),
+                }
+              : o
+          )
+        );
+
+        if (data.status === "paid") {
+          window.dispatchEvent(new CustomEvent("loyalty-refresh"));
+        }
+      } catch (err: any) {
+        console.error("[OrdersContext] updateOrderStatus error:", err);
+        throw err;
+      }
+    },
+    []
+  );
 
   const updateOrderInfo = useCallback(
-  async (
-    id: number | string,
-    data: { name?: string; table?: string | number }
-  ) => {
+    async (
+      id: number | string,
+      data: { name?: string; table?: string | number }
+    ) => {
+      try {
+        const payload: Record<string, any> = {};
+
+        if (data.name !== undefined) payload.customer_name = data.name;
+        if (data.table !== undefined) payload.table_number = String(data.table);
+
+        const { error } = await supabase
+          .from("orders")
+          .update(payload)
+          .eq("id", id);
+
+        if (error) throw error;
+
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === id
+              ? {
+                  ...o,
+                  name: data.name ?? o.name,
+                  table: data.table ?? o.table,
+                }
+              : o
+          )
+        );
+      } catch (err: any) {
+        console.error("[OrdersContext] updateOrderInfo error:", err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const deleteOrder = useCallback(async (id: number | string) => {
     try {
-      const payload: Record<string, any> = {};
-
-      if (data.name !== undefined) payload.customer_name = data.name;
-      if (data.table !== undefined) payload.table_number = String(data.table);
-
       const { error } = await supabase
         .from("orders")
-        .update(payload)
+        .delete()
         .eq("id", id);
 
       if (error) throw error;
 
-      setOrders((prev) =>
-        prev.map((o) =>
-          o.id === id
-            ? {
-                ...o,
-                name: data.name ?? o.name,
-                table: data.table ?? o.table,
-              }
-            : o
-        )
-      );
+      setOrders((prev) => prev.filter((o) => o.id !== id));
     } catch (err: any) {
-      console.error("[OrdersContext] updateOrderInfo error:", err);
+      console.error("[OrdersContext] deleteOrder error:", err);
       throw err;
     }
-  },
-  []
-);
-
-  const deleteOrder = useCallback(async (id: number | string) => {
-  try {
-    const { error } = await supabase
-      .from("orders")
-      .delete()
-      .eq("id", id);
-
-    if (error) throw error;
-
-    setOrders((prev) => prev.filter((o) => o.id !== id));
-  } catch (err: any) {
-    console.error("[OrdersContext] deleteOrder error:", err);
-    throw err;
-  }
-}, []);
+  }, []);
 
   const value = useMemo(
     () => ({

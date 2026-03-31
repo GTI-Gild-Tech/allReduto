@@ -28,6 +28,7 @@ type OrderUI = {
   id: number | string;
   orderNumber?: string;
   name?: string;
+  phone?: string;
   table?: string | number;
   items?: OrderItemUI[];
   /** Total em CENTAVOS */
@@ -110,16 +111,13 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
       role="dialog"
       aria-modal="true"
     >
-      {/* overlay */}
       <div
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
         aria-hidden
       />
 
-      {/* card */}
       <div className="relative mx-4 w-full max-w-4xl rounded-xl bg-white shadow-2xl">
-        {/* header */}
         <div className="flex items-start justify-between p-6">
           <div className="space-y-1 text-left">
             <h2 className="text-2xl font-bold text-[#0f4c50]">
@@ -127,9 +125,9 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
             </h2>
             <p className="text-sm text-gray-700">
               Mesa: <strong>{order.table ?? "—"}</strong> • Cliente:{" "}
-              <strong>{order.name ?? "—"}</strong>
+              <strong>{order.name ?? "—"}</strong> • Telefone:{" "}
+              <strong>{order.phone ?? "—"}</strong>
             </p>
-            
           </div>
           <button
             onClick={onClose}
@@ -141,10 +139,8 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
           </button>
         </div>
 
-        {/* tabela */}
         <div className="px-6 pb-4">
           <div className="overflow-hidden rounded-lg border">
-            {/* head com fundo bege do anexo */}
             <div className="grid grid-cols-[1fr_80px_120px_140px] bg-[#bf986c]/85 px-4 py-3 text-left text-sm font-semibold text-white/95">
               <span>Item</span>
               <span className="text-center">Qtd</span>
@@ -182,7 +178,6 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
                 );
               })}
 
-              {/* Total */}
               <div className="flex items-center justify-end gap-6 px-4 py-5">
                 <div className="text-right text-[15px] text-gray-600">Total</div>
                 <div className="text-2xl font-extrabold text-[#0f4c50]">
@@ -193,7 +188,6 @@ function OrderDetailsModal({ open, onClose, order }: OrderDetailsModalProps) {
           </div>
         </div>
 
-        {/* footer de ações (opcional) */}
         <div className="flex items-center justify-end gap-2 p-4 pt-0">
           <ActionButton onClick={onClose} className="border-gray-300">
             Fechar
@@ -220,19 +214,17 @@ export default function PedidosContent() {
   const [confirmId, setConfirmId] = React.useState<string | number | null>(null);
   const [previousOrderCount, setPreviousOrderCount] = React.useState(0);
 
-  // Pré-carrega o áudio para garantir reprodução rápida
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  
+
   React.useEffect(() => {
     audioRef.current = new Audio(bellSound);
-    audioRef.current.preload = 'auto';
+    audioRef.current.preload = "auto";
   }, []);
 
-  // Função para tocar som de notificação (arquivo MP3)
   const playNotificationSound = React.useCallback(() => {
     try {
       if (audioRef.current) {
-        audioRef.current.currentTime = 0; // Reinicia o áudio
+        audioRef.current.currentTime = 0;
         audioRef.current.play().catch((err) => {
           console.error("[PedidosContent] Erro ao tocar som de notificação:", err);
         });
@@ -242,34 +234,29 @@ export default function PedidosContent() {
     }
   }, []);
 
-  // Auto-refresh com notificação sonora (só nesta página)
   React.useEffect(() => {
-    // Carrega imediatamente
     refresh();
 
-    // Configura intervalo de atualização
     const intervalId = window.setInterval(async () => {
       await refresh();
-    }, 5000); // atualiza a cada 5s
+    }, 5000);
 
     return () => clearInterval(intervalId);
   }, [refresh]);
 
-  // Detecta novos pedidos e toca som
   React.useEffect(() => {
     const currentCount = orders.length;
-    
+
     if (previousOrderCount > 0 && currentCount > previousOrderCount) {
       console.log("[PedidosContent] Novo pedido detectado! Tocando notificação...");
       playNotificationSound();
     }
-    
+
     setPreviousOrderCount(currentCount);
   }, [orders.length, previousOrderCount, playNotificationSound]);
 
+  const [selectedDate, setSelectedDate] = React.useState<string>("");
 
-  // filtro de data
-  const [selectedDate, setSelectedDate] = React.useState<string>(""); // YYYY-MM-DD
   const filteredOrders = React.useMemo(() => {
     if (!selectedDate) return orders;
     return orders.filter((o) => {
@@ -283,27 +270,26 @@ export default function PedidosContent() {
     });
   }, [orders, selectedDate]);
 
-  // modal
   const [openModal, setOpenModal] = React.useState(false);
   const [selectedOrder, setSelectedOrder] = React.useState<OrderUI | null>(null);
+
   const handleViewOrder = (order: OrderUI) => {
     setSelectedOrder(order);
     setOpenModal(true);
   };
-  async function handleConfirmCancel(id: string | number) {
-  try {
-    setSavingId(id);
-    await updateOrderStatus(id, "cancelado");
-  } finally {
-    setSavingId(null);
-    setConfirmId(null);
-  }
-}
 
+  async function handleConfirmCancel(id: string | number) {
+    try {
+      setSavingId(id);
+      await updateOrderStatus(id, "cancelado");
+    } finally {
+      setSavingId(null);
+      setConfirmId(null);
+    }
+  }
 
   return (
     <div className="space-y-4 flex-col items-center justify-center text-center self-center lg:mx-[20%] mx-5">
-      {/* HEADER: título central e filtro à direita */}
       <TitleCommon text="Pedidos" />
 
       <div className="flex flex-wrap gap-2 justify-center items-center">
@@ -338,7 +324,6 @@ export default function PedidosContent() {
         </button>
       </div>
 
-      {/* Lista de pedidos */}
       {!filteredOrders.length ? (
         <div className="p-6 text-gray-600">
           Nenhum pedido por aqui ainda.
@@ -356,7 +341,6 @@ export default function PedidosContent() {
           return (
             <div key={o.id} className="rounded border bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between ">
-                {/* Bloco esquerdo: dados */}
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold text-[#0f4c50]">
@@ -367,7 +351,8 @@ export default function PedidosContent() {
 
                   <div className="text-sm text-start text-gray-600">
                     <p>
-                      Cliente: <strong>{o.name || "—"}</strong> • Mesa:{" "}
+                      Cliente: <strong>{o.name || "—"}</strong> • Telefone:{" "}
+                      <strong>{o.phone || "—"}</strong> • Mesa:{" "}
                       <strong>{o.table || "—"}</strong>
                     </p>
                     <p>
@@ -377,7 +362,6 @@ export default function PedidosContent() {
                   </div>
                 </div>
 
-                {/* Bloco direito: ações */}
                 <div className="flex flex-col items-end gap-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">Status</span>
@@ -423,7 +407,6 @@ export default function PedidosContent() {
         })
       )}
 
-      {/* Modal */}
       <OrderDetailsModal
         open={openModal}
         order={selectedOrder}
