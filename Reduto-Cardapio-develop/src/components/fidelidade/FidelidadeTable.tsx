@@ -27,6 +27,8 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
     );
   });
 
+  const orderedCustomers = [...filteredCustomers].reverse();
+
   const handleViewHistory = (customerId: string) => {
     setSelectedCustomerId(customerId);
     setIsHistoryOpen(true);
@@ -109,7 +111,7 @@ export function FidelidadeTable({ searchTerm, customers }: FidelidadeTableProps)
           <div className="bg-[#C1A07B] box-border flex flex-row gap-2.5 items-center justify-start px-5 py-3 shrink-0" />
 
           {/* Table Rows */}
-          {filteredCustomers.map((customer, index) => (
+          {orderedCustomers.map((customer, index) => (
             <>
               {/* Nome */}
               <div
