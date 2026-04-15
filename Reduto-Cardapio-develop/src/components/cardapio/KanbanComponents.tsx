@@ -111,8 +111,8 @@ const formatPrices = () =>
     >
       {/* Product name */}
       <div className="content-stretch flex gap-2 items-center justify-start relative shrink-0 w-[259px]">
-        <div className="font-['Rethink_Sans:SemiBold',_sans-serif] font-semibold relative shrink-0 text-[#0f4c50] text-[20px] w-full">
-          <p className="leading-[1.1] line-clamp-2">{product.name}</p>
+        <div className="font-['Rethink_Sans:SemiBold',_sans-serif] font-semibold relative shrink-0 text-[#0f4c50] text-[24px] w-full">
+          <p className="leading-[1.5] line-clamp-2">{product.name}</p>
         </div>
       </div>
 
