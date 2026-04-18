@@ -17,8 +17,6 @@ build*.rar
 **/build*.rar            # Arquivos .rar que começam com "build"
 build*.zip              # Se quiser também para arquivos zip
 
-# Environment variables
-**/.env
 
 # Logs
 *.log
