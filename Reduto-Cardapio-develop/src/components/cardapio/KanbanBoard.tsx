@@ -21,6 +21,7 @@ import {
 import { Plus, Download } from "lucide-react";
 
 type PriceType = 'Tamanho' | 'Porção' | 'Único';
+const ORDERED_SIZES = ['P', 'M', 'G'] as const;
 
 interface CustomOption {
   id: string;
@@ -104,34 +105,56 @@ function QuantityControl({
   onChange: (value: number) => void; 
 }) {
   return (
-    <div className="bg-white box-border content-stretch flex h-[35px] items-center justify-between px-[5px] py-0 relative rounded-[10px] shrink-0 w-20">
-      <div aria-hidden="true" className="absolute border border-[#d9d9d9] border-solid inset-0 pointer-events-none rounded-[10px]" />
+    <div className="inline-flex h-11 items-center rounded-lg border border-[#d6d6d6] bg-white">
       <button
+        type="button"
         onClick={() => onChange(Math.max(1, value - 1))}
-        className="relative shrink-0 size-3.5 hover:opacity-70"
+        className="h-full px-4 text-lg text-[#0f4c50] hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-white rounded-lg"
+        aria-label="Diminuir"
+        disabled={value <= 1}
       >
-        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 14 14">
-          <path d={svgPaths.p25ae9580} fill="#0F4C50" stroke="#0F4C50" />
-        </svg>
+        –
       </button>
-      <div className="bg-white h-6 overflow-clip relative shrink-0 w-[22px]">
-        <div className="absolute flex flex-col font-['Rethink_Sans:Regular',_sans-serif] font-normal justify-center leading-[0] left-1/2 text-[20px] text-black text-center text-nowrap top-3 translate-x-[-50%] translate-y-[-50%]">
-          <p className="leading-[0px] whitespace-pre">{value}</p>
-        </div>
-      </div>
+      <span className="grid h-full min-w-[2.2rem] place-items-center text-center text-sm font-semibold text-[#0f4c50]">
+        {value}
+      </span>
       <button
+        type="button"
         onClick={() => onChange(value + 1)}
-        className="relative shrink-0 size-3.5 hover:opacity-70"
+        className="h-full px-4 text-lg text-[#0f4c50] hover:bg-gray-50 rounded-lg"
+        aria-label="Aumentar"
       >
-        <svg className="block size-full" fill="none" preserveAspectRatio="none" viewBox="0 0 14 14">
-          <path d={svgPaths.p278a8d00} fill="#0F4C50" stroke="#0F4C50" />
-        </svg>
+        +
       </button>
     </div>
   );
 }
 
 function EditProductModal({ product, isOpen, onClose, onSave, categories }: EditProductModalProps & { categories: string[] }) {
+  const parseImageList = (value?: string) => {
+    if (!value?.trim()) return [] as string[];
+    const normalized = value.trim();
+
+    if (normalized.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(normalized);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => (typeof item === "string" ? item.trim() : ""))
+            .filter(Boolean);
+        }
+      } catch {
+        // ignore parse error and continue with fallback formats
+      }
+    }
+
+    if (normalized.includes("||")) {
+      return normalized.split("||").map((item) => item.trim()).filter(Boolean);
+    }
+
+    return [normalized];
+  };
+
   const [formData, setFormData] = useState({
     name: '',
     category: categories[0] || 'Cappuccinos',
@@ -147,12 +170,17 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
 
   useEffect(() => {
   if (product) {
+    const selectedSizes = product.sizes
+      .map(s => s.size)
+      .filter((size): size is typeof ORDERED_SIZES[number] => ORDERED_SIZES.includes(size as typeof ORDERED_SIZES[number]))
+      .sort((a, b) => ORDERED_SIZES.indexOf(a) - ORDERED_SIZES.indexOf(b));
+
     setFormData({
       name: product.name,
       category: product.category,
       description:  product.description ?? '',
       priceType: 'Tamanho',
-      selectedSizes: product.sizes.map(s => s.size),
+      selectedSizes: selectedSizes.length > 0 ? selectedSizes : ['P'],
       sizePrices: product.sizes.reduce((acc, size) => ({ ...acc, [size.size]: String(size.price) }), {} as Record<string, string>),
       customOptions: [],
       uniquePrice: '',
@@ -166,7 +194,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       category: categories[0] || 'Cappuccinos',
       description: '',
       priceType: 'Tamanho',
-      selectedSizes: ['M', 'G'],
+      selectedSizes: ['P'],
       sizePrices: { P: '', M: '', G: '' },
       customOptions: [],
       uniquePrice: '',
@@ -179,6 +207,11 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
 
   // --- NOVO: guardamos o arquivo (pra mandar ao backend) ---
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageGallery, setImageGallery] = useState<string[]>([]);
+  const [previewImageIndex, setPreviewImageIndex] = useState(0);
+  const [draggedImageIndex, setDraggedImageIndex] = useState<number | null>(null);
+  const [dragOverImageIndex, setDragOverImageIndex] = useState<number | null>(null);
+  const [highlightedImageIndex, setHighlightedImageIndex] = useState<number | null>(null);
 
   const handleSave = () => {
   if (!formData.name || !formData.category) return;
@@ -198,14 +231,20 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   if (sizes.length === 0) return;
 
   const base = product ? { ...product } : {};
+  const orderedImages = imageGallery.filter(Boolean);
+  const serializedImage =
+    orderedImages.length <= 1
+      ? (orderedImages[0] ?? formData.imageUrl ?? "")
+      : JSON.stringify(orderedImages);
+  const fileForUpload = orderedImages.length <= 1 ? (imageFile || undefined) : undefined;
 
   onSave({
     ...base,
     ...formData,
     id: product?.id || Date.now().toString(),
     sizes,
-    imageUrl: formData.imageUrl || product?.imageUrl || '',
-  } as Product, imageFile || undefined);
+    imageUrl: serializedImage || product?.imageUrl || '',
+  } as Product, fileForUpload);
 
   onClose();
 };
@@ -213,9 +252,9 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   const toggleSize = (size: string) => {
     setFormData(prev => ({
       ...prev,
-      selectedSizes: prev.selectedSizes.includes(size)
-        ? prev.selectedSizes.filter(s => s !== size)
-        : [...prev.selectedSizes, size]
+      selectedSizes: ORDERED_SIZES.filter(option =>
+        option === size ? !prev.selectedSizes.includes(size) : prev.selectedSizes.includes(option)
+      ) as string[]
     }));
   };
 
@@ -304,27 +343,131 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
     return new File([u8arr], filename, { type: mime });
   }
 
-  if (!isOpen) return null;
-
-  const onImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const onImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
     const okTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!okTypes.includes(file.type)) {
+    if (!files.every((file) => okTypes.includes(file.type))) {
       alert("É aceito apenas os formatos JPG, PNG e WEBP.");
       e.target.value = "";
       return;
     }
-    // guarda o arquivo original (caso o usuário decida cortar depois)
-    setImageFile(file);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setRawImage(String(reader.result));
-      setIsCropping(true);
-    };
-    reader.readAsDataURL(file);
+    const remainingSlots = Math.max(0, 5 - imageGallery.length);
+    if (remainingSlots === 0) {
+      alert("O limite máximo é de 5 imagens.");
+      e.target.value = "";
+      return;
+    }
+
+    const toDataUrl = (file: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("Falha ao ler imagem."));
+        reader.readAsDataURL(file);
+      });
+
+    try {
+      const imageDataUrls = (await Promise.all(files.slice(0, remainingSlots).map(toDataUrl))).filter(Boolean);
+      if (imageDataUrls.length === 0) return;
+
+      if (files.length > remainingSlots) {
+        alert(`Você pode adicionar no máximo 5 imagens. Foram adicionadas apenas as primeiras ${remainingSlots}.`);
+      }
+
+      setImageGallery((prev) => {
+        const next = [...prev, ...imageDataUrls];
+        const first = next[0] ?? "";
+        setFormData((current) => ({ ...current, imageUrl: first }));
+        return next;
+      });
+
+      setPreviewImageIndex((prev) => (prev < 0 ? 0 : prev));
+      setImageFile(files.length === 1 ? files[0] : null);
+    } catch {
+      alert("Não foi possível carregar as imagens selecionadas.");
+    } finally {
+      e.target.value = "";
+    }
   };
+
+  const moveImage = (index: number, direction: "left" | "right") => {
+    setImageGallery((prev) => {
+      const target = direction === "left" ? index - 1 : index + 1;
+      if (target < 0 || target >= prev.length) return prev;
+
+      const next = [...prev];
+      const [moved] = next.splice(index, 1);
+      next.splice(target, 0, moved);
+
+      const first = next[0] ?? "";
+      setFormData((current) => ({ ...current, imageUrl: first }));
+      setPreviewImageIndex((current) => {
+        if (current === index) return target;
+        if (current === target) return index;
+        return current;
+      });
+
+      return next;
+    });
+  };
+
+  const reorderImage = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setImageGallery((prev) => {
+      if (fromIndex < 0 || fromIndex >= prev.length || toIndex < 0 || toIndex >= prev.length) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+
+      const first = next[0] ?? "";
+      setFormData((current) => ({ ...current, imageUrl: first }));
+      setPreviewImageIndex((current) => {
+        if (current === fromIndex) return toIndex;
+
+        if (fromIndex < toIndex && current > fromIndex && current <= toIndex) {
+          return current - 1;
+        }
+
+        if (fromIndex > toIndex && current >= toIndex && current < fromIndex) {
+          return current + 1;
+        }
+
+        return current;
+      });
+
+      return next;
+    });
+  };
+
+  const removeImageAt = (index: number) => {
+    setImageGallery((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      const first = next[0] ?? "";
+      setFormData((current) => ({ ...current, imageUrl: first }));
+      setPreviewImageIndex((current) => Math.max(0, Math.min(current, next.length - 1)));
+      if (next.length !== 1) {
+        setImageFile(null);
+      }
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const initialImages = parseImageList(product?.imageUrl ?? "");
+    setImageGallery(initialImages);
+    setPreviewImageIndex(0);
+    setDraggedImageIndex(null);
+    setDragOverImageIndex(null);
+    setHighlightedImageIndex(null);
+  }, [isOpen, product?.id, product?.imageUrl]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -338,9 +481,9 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
           </DialogDescription>
         </DialogHeader>
         
-        <div className="content-stretch flex flex-col md:flex-row gap-4 md:gap-8 items-start justify-start relative shrink-0 px-0 md:px-6 pb-4">
+        <div className="content-stretch flex flex-col md:flex-row gap-4 md:gap-8 items-start md:justify-center justify-start relative shrink-0 px-0 md:px-6 pb-4">
           {/* Left column - Basic info */}
-          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:w-[450px]">
+          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:flex-1 md:min-w-0">
             {/* Nome */}
             <div className="relative shrink-0 w-full">
               <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]" style={{ fontVariationSettings: "'wdth' 100" }}>
@@ -417,75 +560,25 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
               <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]" style={{ fontVariationSettings: "'wdth' 100" }}>
                 <p className="leading-[normal] whitespace-pre">Descrição</p>
               </div>
-              <div className="h-[44px] relative rounded-[5px] w-full">
-                <input
-                  type="text"
+              <div className="relative rounded-[5px] w-full">
+                <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full h-full px-4 border border-[#b5b5b5] rounded-[5px] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.25)] text-[14px] font-['Open_Sans:Regular',_sans-serif]"
+                  className="w-full min-h-[120px] px-4 py-3 border border-[#b5b5b5] rounded-[5px] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.25)] text-[14px] font-['Open_Sans:Regular',_sans-serif] resize-y"
                   placeholder="Descrição do produto"
                 />
               </div>
             </div>
 
-            {/* Adicione imagem do produto */}
-            <div className="relative shrink-0 w-full">
-              <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-                <p className="leading-[normal] whitespace-pre">Adicione imagem do produto</p>
-              </div>
-  
-              {/* INPUT oculto + handler */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={onImageChange}
-              />
-
-              {/* Área clicável com preview */}
-              <div
-                onClick={onPickImage}
-                className="h-[160px] relative rounded-[5px] w-full border-2 border-dashed border-[#b5b5b5] flex items-center justify-center bg-[#fafafa] hover:bg-[#f0f0f0] transition-colors cursor-pointer overflow-hidden"
-              >
-                {formData.imageUrl ? (
-                  <img
-                    src={formData.imageUrl}
-                    alt="Prévia do produto"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-center">
-                    <div className="text-[#797474] text-[14px] mb-2">📷</div>
-                    <div className="text-[#797474] text-[12px]">
-                      Clique para adicionar imagem
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Botão remover (opcional) */}
-              {formData.imageUrl && (
-                <div className="mt-2 flex justify-end">
-                  <button
-                    onClick={() => { setFormData(prev => ({ ...prev, imageUrl: '' })); setImageFile(null); }}
-                    className="text-sm px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded-md"
-                  >
-                    Remover imagem
-                  </button>
-                </div>
-              )}
-            </div>
-
           </div>
 
           {/* Right column - Price options */}
-          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:w-[500px]">
+          <div className="content-stretch flex flex-col gap-6 items-start justify-start relative shrink-0 w-full md:flex-1 md:min-w-0">
             {/* Tamanho ou quantidade */}
             <div className="relative shrink-0 w-full">
               <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start relative w-full">
                 <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] text-[13px] text-black tracking-[0.52px] w-full" style={{ fontVariationSettings: "'wdth' 100" }}>
-                  <p className="leading-[normal]">Tamanho ou porção</p>
+                  <p className="leading-[normal]">Tamanho, porção ou único</p>
                 </div>
                 <div className="box-border content-stretch flex gap-3 h-12 items-center justify-start px-0 relative shrink-0 w-full">
                   <BadgeOption 
@@ -548,18 +641,18 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                     <div className="box-border content-stretch flex flex-col gap-4 items-start justify-start relative shrink-0 w-full">
                       {formData.selectedSizes.map(size => (
                         <div key={size} className="content-stretch flex gap-4 items-center justify-start relative shrink-0 w-full">
-                          <div className="box-border content-stretch flex gap-2.5 items-center justify-start px-3 py-2 relative rounded-[2px] shrink-0 w-[110px]">
+                          <div className="relative flex h-[42px] w-[110px] shrink-0 items-center justify-center rounded-[6px] border border-[#0f4c50] bg-white px-3">
                             <div aria-hidden="true" className="absolute border border-[#0f4c50] border-solid inset-0 pointer-events-none rounded-[2px]" />
-                            <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[#0f4c50] text-[14px] text-nowrap">
+                            <div className="font-['Rethink_Sans:Regular',_sans-serif] text-[14px] font-normal leading-none relative shrink-0 text-[#0f4c50] text-nowrap">
                               <p className="leading-[1.4] whitespace-pre">Tamanho {size}</p>
                             </div>
                           </div>
-                          <div className="h-[42px] relative rounded-[5px] flex-1">
+                          <div className="relative h-[42px] flex-1">
                             <input
                               type="text"
                               value={formData.sizePrices[size] || ''}
                               onChange={(e) => updateSizePrice(size, e.target.value)}
-                              className="w-full h-full px-4 border border-[#b5b5b5] rounded-[5px] shadow-[0px_0px_1px_0px_rgba(0,0,0,0.25)] text-[14px] font-['Open_Sans:Regular',_sans-serif]"
+                              className="h-full w-full rounded-[6px] border border-[#d2d7d7] bg-white px-4 text-[14px] font-['Open_Sans:Regular',_sans-serif] text-[#111827] outline-none transition-colors placeholder:text-[#9ca3af] focus:border-[#0f4c50] focus:ring-2 focus:ring-[#0f4c50]/10"
                               placeholder="0,00"
                             />
                           </div>
@@ -593,44 +686,51 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                     </div>
                     <div className="box-border content-stretch flex flex-col gap-4 items-start justify-center relative shrink-0 w-full">
                       {formData.customOptions.map(option => (
-                        <div key={option.id} className="box-border content-stretch flex flex-col gap-3 items-start justify-start px-3 py-3 relative rounded-[2px] shrink-0 w-full">
-                          <div aria-hidden="true" className="absolute border border-[#0f4c50] border-solid inset-0 pointer-events-none rounded-[2px]" />
+                        <div key={option.id} className="box-border content-stretch flex flex-col gap-3 items-start justify-start px-3 py-3 relative rounded-[8px] shrink-0 w-full border border-[#d2d7d7] bg-white">
                           
-                          {/* Primeira linha: Nome e controle de quantidade */}
-                          <div className="content-stretch flex gap-4 items-center justify-start relative shrink-0 w-full">
-                            <input
-                              type="text"
-                              value={option.name}
-                              onChange={(e) => updateCustomOption(option.id, 'name', e.target.value)}
-                              className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] bg-transparent border-none outline-none text-[#0f4c50] text-[14px] flex-1"
-                              placeholder="Nome da opção"
-                            />
-                            <QuantityControl
-                              value={option.quantity}
-                              onChange={(value) => updateCustomOption(option.id, 'quantity', value)}
-                            />
-                            <button
-                              onClick={() => removeCustomOption(option.id)}
-                              className="ml-2 text-red-500 hover:text-red-700 text-[14px] transition-colors"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          
-                          {/* Segunda linha: Campo de valor */}
-                          <div className="content-stretch flex gap-4 items-center justify-start relative shrink-0 w-full">
-                            <div className="box-border content-stretch flex gap-2.5 items-center justify-start px-3 py-1.5 relative rounded-[2px] shrink-0 bg-[#f0f0f0]">
-                              <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[#797474] text-[12px] text-nowrap">
-                                <p className="leading-[1.2] whitespace-pre">Valor:</p>
+                          {/* Primeira linha: Nome da opção e excluir */}
+                          <div className="content-stretch flex flex-wrap gap-3 items-center justify-between relative shrink-0 w-full">
+                            <div className="relative flex h-[42px] w-[130px] shrink-0 items-center justify-center rounded-[6px] border border-[#0f4c50] bg-white px-3">
+                              <div className="font-['Rethink_Sans:Regular',_sans-serif] text-[14px] font-normal leading-none text-[#0f4c50] text-nowrap">
+                                <p className="leading-[1.4] whitespace-pre">{option.name}</p>
                               </div>
                             </div>
-                            <input
-                              type="text"
-                              value={option.price}
-                              onChange={(e) => updateCustomOption(option.id, 'price', e.target.value)}
-                              className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] bg-transparent border border-[#d9d9d9] rounded-[4px] px-3 py-1.5 outline-none text-[#0f4c50] text-[14px] flex-1"
-                              placeholder="0,00"
-                            />
+                            <button
+                              onClick={() => removeCustomOption(option.id)}
+                              className="h-[42px] rounded-[6px] border border-[#f3caca] bg-[#fff5f5] px-3 text-[13px] font-medium text-[#b42318] transition-colors hover:bg-[#ffe9e9]"
+                            >
+                              Excluir
+                            </button>
+                          </div>
+
+                          {/* Segunda linha: Quantidade e valor */}
+                          <div className="content-stretch flex flex-nowrap gap-4 items-center justify-start relative shrink-0 w-full">
+                            <div className="content-stretch flex gap-3 items-center justify-start relative shrink-0">
+                              <div className="box-border content-stretch flex gap-2.5 items-center justify-start px-3 py-1.5 relative rounded-[2px] shrink-0 bg-[#f0f0f0]">
+                                <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[#797474] text-[12px] text-nowrap">
+                                  <p className="leading-[1.2] whitespace-pre">Quantidade</p>
+                                </div>
+                              </div>
+                              <QuantityControl
+                                value={option.quantity}
+                                onChange={(value) => updateCustomOption(option.id, 'quantity', value)}
+                              />
+                            </div>
+
+                            <div className="content-stretch flex gap-3 items-center justify-start relative flex-1 min-w-0 overflow-hidden">
+                              <div className="box-border content-stretch flex gap-2.5 items-center justify-start px-3 py-1.5 relative rounded-[2px] shrink-0 bg-[#f0f0f0]">
+                                <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[#797474] text-[12px] text-nowrap">
+                                  <p className="leading-[1.2] whitespace-pre">Valor:</p>
+                                </div>
+                              </div>
+                              <input
+                                type="text"
+                                value={option.price}
+                                onChange={(e) => updateCustomOption(option.id, 'price', e.target.value)}
+                                className="h-[42px] flex-1 min-w-0 w-full rounded-[6px] border border-[#d2d7d7] bg-white px-4 text-[14px] font-['Open_Sans:Regular',_sans-serif] text-[#111827] outline-none transition-colors placeholder:text-[#9ca3af] focus:border-[#0f4c50] focus:ring-2 focus:ring-[#0f4c50]/10"
+                                placeholder="0,00"
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -658,28 +758,198 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                 </div>
               </div>
             )}
+
+            {/* Imagens do produto */}
+            <div className="relative shrink-0 w-full border-t pt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] text-[13px] text-black tracking-[0.52px]" style={{ fontVariationSettings: "'wdth' 100" }}>
+                  <p className="leading-[normal] whitespace-pre">Imagens do produto</p>
+                </div>
+                <div className="rounded-full bg-[#0f4c50]/10 px-2.5 py-1 text-[11px] font-medium text-[#0f4c50]">
+                  {imageGallery.length} {imageGallery.length === 1 ? "imagem" : "imagens"}
+                </div>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="hidden"
+                onChange={onImageChange}
+              />
+
+              <div className="rounded-[10px] border border-[#d8dfdf] bg-white p-3 ">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-[12px] text-[#5f6666]">
+                    Arraste para ordenar. A primeira imagem sera usada como capa.
+                  </div>
+
+                  {imageGallery.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImageGallery([]);
+                        setPreviewImageIndex(0);
+                        setFormData(prev => ({ ...prev, imageUrl: '' }));
+                        setImageFile(null);
+                      }}
+                      className="rounded-full bg-[#fee2e2] px-3 py-1 text-[11px] font-medium text-[#7f1d1d] hover:bg-[#fecaca]"
+                    >
+                      Limpar
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-[#797474]">Selecione uma ou varias imagens</span>
+                  )}
+                </div>
+
+                <div className="flex flex-nowrap gap-3 overflow-x-auto pb-1">
+                  {imageGallery.map((img, index) => (
+                    <div
+                      key={`${img.slice(0, 24)}-${index}`}
+                      draggable
+                      onDragStart={() => setDraggedImageIndex(index)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDragEnter={() => setDragOverImageIndex(index)}
+                      onDrop={() => {
+                        if (draggedImageIndex === null) return;
+                        reorderImage(draggedImageIndex, index);
+                        setDraggedImageIndex(null);
+                        setDragOverImageIndex(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedImageIndex(null);
+                        setDragOverImageIndex(null);
+                      }}
+                      className={`relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-[16px] border cursor-move transition-all duration-200 ${
+                        draggedImageIndex === index ? "opacity-60" : ""
+                      } ${
+                        dragOverImageIndex === index ? "-translate-y-1 border-[#0f4c50] ring-2 ring-[#0f4c50]/30" : ""
+                      } ${
+                        previewImageIndex === index ? "border-[#0f4c50] ring-2 ring-[#0f4c50]/20" : "border-[#d6d6d6]"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (previewImageIndex === index) {
+                            setHighlightedImageIndex(index);
+                            return;
+                          }
+                          setPreviewImageIndex(index);
+                        }}
+                        className="h-full w-full"
+                        title={
+                          previewImageIndex === index
+                            ? `Imagem ${index + 1} (clique para ampliar)`
+                            : `Imagem ${index + 1}`
+                        }
+                      >
+                        <img src={img} alt={`Imagem ${index + 1}`} className="h-full w-full object-cover" />
+                      </button>
+
+                      <div className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">
+                        {index + 1}
+                      </div>
+
+                      <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-0.5 bg-black/45 p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => moveImage(index, "left")}
+                          disabled={index === 0}
+                          className="rounded px-1 text-[10px] text-white disabled:opacity-40"
+                          title="Mover para a esquerda"
+                        >
+                          ←
+                        </button>
+                        <span className="px-0.5 text-[9px] text-white/80">::</span>
+                        <button
+                          type="button"
+                          onClick={() => moveImage(index, "right")}
+                          disabled={index === imageGallery.length - 1}
+                          className="rounded px-1 text-[10px] text-white disabled:opacity-40"
+                          title="Mover para a direita"
+                        >
+                          →
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => removeImageAt(index)}
+                        className="absolute right-0.5 top-0.5 rounded bg-black/55 px-1 text-[10px] text-white"
+                        title="Remover imagem"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+
+                  {imageGallery.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={onPickImage}
+                      className="group flex h-[88px] w-[88px] flex-col items-center justify-center rounded-[16px] border border-dashed border-[#d0d5d9] bg-[#f3f4f6] text-center transition-all hover:-translate-y-0.5 hover:border-[#8c959d] hover:bg-[#eceff1]"
+                    >
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-[#9aa3ab] text-white transition-transform duration-200 group-hover:scale-105 group-hover:bg-[#7f8992]">
+                        <Plus className="h-5 w-5" />
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Main Buttons */}
-        <div className="flex justify-center gap-4 pt-8 pb-4 px-6 flex-wrap">
+        <div className="flex justify-center gap-4 pt-8 pb-4 px-6 flex-wrap ">
           <button
             onClick={onClose}
-            className="border border-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-[60px] py-5 relative rounded-[50px] shrink-0 hover:bg-[#f0f0f0] transition-colors min-w-[280px]"
+            className="border border-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[50px] shrink-0 hover:bg-[#f0f0f0] transition-colors min-w-[80px]"
           >
-            <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[18px] text-center text-nowrap text-[#0f4c50] tracking-[0.2px]" style={{ fontVariationSettings: "'wdth' 100" }}>
+            <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-base text-center text-nowrap text-[#0f4c50] tracking-[0.2px]" >
               <p className="leading-none whitespace-pre">Cancelar</p>
             </div>
           </button>
           <button
             onClick={handleSave}
-            className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-[60px] py-5 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors min-w-[280px]"
+            className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors min-w-[80px]"
           >
-            <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[18px] text-center text-nowrap text-white tracking-[0.2px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-              <p className="leading-none whitespace-pre">Finalizar cadastro</p>
+            <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-base text-center text-nowrap text-white tracking-[0.2px]" >
+              <p className="leading-none whitespace-pre">{product ? 'Concluir edição' : 'Finalizar cadastro'}</p>
             </div>
           </button>
         </div>
+
+        {highlightedImageIndex !== null && imageGallery[highlightedImageIndex] && (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-black/70"
+              onClick={() => setHighlightedImageIndex(null)}
+              aria-hidden
+            />
+
+            <div className="relative z-10 w-full max-w-[980px]">
+              <button
+                type="button"
+                onClick={() => setHighlightedImageIndex(null)}
+                className="absolute right-2 top-2 rounded-md bg-black/65 px-3 py-1 text-sm text-white hover:bg-black/80"
+              >
+                Fechar
+              </button>
+
+              <div className="overflow-hidden rounded-xl border border-white/20 bg-black shadow-2xl">
+                <img
+                  src={imageGallery[highlightedImageIndex]}
+                  alt={`Imagem ${highlightedImageIndex + 1} em destaque`}
+                  className="max-h-[80vh] w-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Cropper overlay (dentro do EditProductModal) */}
           {isCropping && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -730,7 +1000,12 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
                       if (!rawImage || !croppedAreaPixels) return;
                       const croppedDataUrl = await getCroppedImg(rawImage, croppedAreaPixels);
                       // preview pro usuário
-                      setFormData(prev => ({ ...prev, imageUrl: croppedDataUrl }));
+                      setImageGallery((prev) => {
+                        const next = [croppedDataUrl, ...prev.filter((img) => img !== croppedDataUrl)];
+                        setPreviewImageIndex(0);
+                        setFormData(current => ({ ...current, imageUrl: next[0] ?? '' }));
+                        return next;
+                      });
                       // arquivo real (PNG) pra subir no backend
                       const safeName = (imageFile?.name || 'crop.png').replace(/\.[^.]+$/, '.png');
                       const fileFromCrop = dataURLtoFile(croppedDataUrl, safeName);

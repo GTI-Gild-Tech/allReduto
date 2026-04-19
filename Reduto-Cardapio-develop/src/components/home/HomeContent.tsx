@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { Product } from "../cardapio/KanbanComponents";
-import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { useProducts } from "../context/ProductsContext";
 import backgroundImage from "../../assets/bg-home.svg";
-import { useRef } from "react";
+import Card from "./Card";
 
 // ⚠️ IMPORT CORRETO: default export do modal
 import AddToCartModal from "../cart/AddToCartModal";
@@ -52,49 +51,57 @@ function MenuProductCard({ product }: MenuProductCardProps) {
     }
   };
 
+  const getProductImages = () => {
+    if (product.imageUrl?.trim()) {
+      const value = product.imageUrl.trim();
+
+      if (value.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            const normalized = parsed
+              .map((item) => (typeof item === "string" ? item.trim() : ""))
+              .filter(Boolean);
+            if (normalized.length > 0) return normalized;
+          }
+        } catch {
+          // ignore parse error and continue with other formats
+        }
+      }
+
+      if (value.includes("||")) {
+        const normalized = value
+          .split("||")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        if (normalized.length > 0) return normalized;
+      }
+
+      return [value];
+    }
+
+  };
+
+  const productImages = getProductImages();
+
   return (
-    <div className="bg-white flex flex-col gap-4 p-6 rounded-[12px] shadow-md max-w-[320px] hover:shadow-lg transition-all mb-10">
-      {/* Imagem */}
-      <div className="w-full h-[180px] rounded-[8px] bg-[#f5f5f5] overflow-hidden">
-        <ImageWithFallback
-          src={getProductImage()}
-          alt={product.name}
-          className="w-full h-full object-cover"
+    <Card
+      name={product.name}
+      pricesText={formatPrices()}
+      description={product.description}
+      imageSrc={getProductImage()}
+      imageSources={productImages}
+      imageAlt={product.name}
+      onOrderClick={() => setIsModalOpen(true)}
+      modal={(
+        <AddToCartModal
+          product={product}
+          imageSources={productImages}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
         />
-      </div>
-
-      <div className="flex flex-col justify-evenly grow">
-        <div className="flex ">
-        {/* Nome */}
-        <h3 className="font-semibold text-[#0f4c50] text-[20px]">{product.name}</h3>
-        </div>
-
-        {/* Preços */}
-        <p className="text-[#2f1b04] text-[14px]">{formatPrices()}</p>
-
-        {/* Descrição — aparece só na impressão */}
-        {product.description?.trim() ? (
-          <p className="show-on-print text-[12px] text-gray-700 mt-1" style={{ display: "none" }}>
-            {product.description}
-          </p>
-        ) : null}
-      </div>
-
-      {/* Botão — escondido na impressão */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="hide-on-print bg-[#0f4c50] px-6 py-3 rounded-[8px] w-full text-white hover:bg-[#0d4247] transition-colors"
-      >
-        Fazer Pedido
-      </button>
-
-      {/* Modal */}
-      <AddToCartModal
-        product={product}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
-    </div>
+      )}
+    />
   );
 }
 
@@ -182,10 +189,10 @@ export function HomeContent() {
         <div className="hide-on-print content-stretch flex gap-4 items-center justify-center relative shrink-0 flex-wrap">
           <button
             onClick={() => setSelectedCategory("todos")}
-            className={`box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[25px] shrink-0 transition-all hover:opacity-80 ${
+            className={`box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[25px] shrink-0 transition-all ${
               selectedCategory === "todos"
-                ? "bg-[#0f4c50] text-white"
-                : "bg-transparent border border-[#0f4c50] text-[#0f4c50]"
+                ? "bg-[#0f4c50] text-white hover:bg-[#0d4247]"
+                : "bg-[#f0eee9] border border-[#0f4c50] text-[#0f4c50] hover:bg-[#e4e1d8]"
             }`}
           >
             <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[14px] text-nowrap">
@@ -197,10 +204,10 @@ export function HomeContent() {
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[25px] shrink-0 transition-all hover:opacity-80 ${
+              className={`box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[25px] shrink-0 transition-all ${
                 selectedCategory === category
-                  ? "bg-[#0f4c50] text-white"
-                  : "bg-transparent border border-[#0f4c50] text-[#0f4c50]"
+                  ? "bg-[#0f4c50] text-white hover:bg-[#0d4247]"
+                  : "bg-[#f0eee9] border border-[#0f4c50] text-[#0f4c50] hover:bg-[#e4e1d8]"
               }`}
             >
               <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[14px] text-nowrap">
