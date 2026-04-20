@@ -51,7 +51,7 @@ export default function CartSidebar({ isOpen, onClose }: Props) {
   const canFinish =
   cartItems.length > 0 &&
   !!customerName.trim() &&
-  !!phoneNumber.replace(/\D/g, "");
+  !!tableNumber.trim();
   const canContinue = cartItems.length > 0;
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
