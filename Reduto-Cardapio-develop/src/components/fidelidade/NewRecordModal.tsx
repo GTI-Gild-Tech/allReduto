@@ -77,7 +77,9 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
   const activeCustomerId = customerId ?? resolvedCustomerId;
   const customer = activeCustomerId ? getCustomerById(activeCustomerId) : undefined;
   const parsedPoints = Number(earnedPoints);
-  const selectedOrderId = selectedOrder ? String(selectedOrder.id) : "";
+  const selectedOrderId = selectedOrder
+    ? String(selectedOrder.orderNumber)
+    : "";
   const alreadyLinkedOrder =
     !!selectedOrderId &&
     customers.some((c) => c.history.some((h) => h.externalOrderId === selectedOrderId));
@@ -153,7 +155,7 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
     }
 
     const selectedOrderTotal = ((selectedOrder.totalCents ?? 0) / 100).toFixed(2).replace(".", ",");
-    const desc = `Pedido ${selectedOrder.id} - R$ ${selectedOrderTotal}`;
+    const desc = `Pedido ${selectedOrderId} - R$ ${selectedOrderTotal}`;
 
     try {
       await addPoints(activeCustomerId, pts, desc, {
