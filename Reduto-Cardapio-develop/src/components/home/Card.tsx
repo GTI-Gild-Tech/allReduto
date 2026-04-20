@@ -25,6 +25,7 @@ export default function Card({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [previousImageIndex, setPreviousImageIndex] = useState(0);
   const [isSliding, setIsSliding] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const autoplayRef = useRef<number | null>(null);
   const slideTimeoutRef = useRef<number | null>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
@@ -97,6 +98,20 @@ export default function Card({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const mediaQuery = window.matchMedia("(hover: none), (pointer: coarse)");
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobile);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const isMobile = window.matchMedia("(hover: none), (pointer: coarse)").matches;
     if (!isMobile) return;
 
@@ -123,8 +138,34 @@ export default function Card({
     };
   }, [startAutoplay, stopAutoplay]);
 
+  const handleCardClick = useCallback(() => {
+    if (isMobile) {
+      onOrderClick();
+    }
+  }, [isMobile, onOrderClick]);
+
+  const handleCardKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isMobile) return;
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onOrderClick();
+      }
+    },
+    [isMobile, onOrderClick],
+  );
+
   return (
-    <div className="bg-white flex flex-col gap-4 p-3 rounded-[12px] shadow-md max-w-[320px] hover:shadow-lg transition-all">
+    <div
+      className={`bg-white flex flex-row md:flex-col gap-3 md:gap-4 p-3 rounded-[12px] shadow-md md:max-w-[320px] w-full hover:shadow-lg transition-all ${
+        isMobile ? "cursor-pointer" : ""
+      }`}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role={isMobile ? "button" : undefined}
+      tabIndex={isMobile ? 0 : undefined}
+    >
       <style>{`
         @keyframes card-slide-right-to-left {
           from {
@@ -139,7 +180,7 @@ export default function Card({
       {/* Imagem */}
       <div
         ref={imageContainerRef}
-        className="w-full h-[180px] rounded-[8px] bg-[#f5f5f5] overflow-hidden relative"
+        className="h-[100px] w-[100px] md:w-full md:h-[180px] shrink-0 md:shrink rounded-[8px] bg-[#f5f5f5] overflow-hidden relative"
         onMouseEnter={startAutoplay}
         onMouseLeave={stopAutoplay}
       >
@@ -179,11 +220,11 @@ export default function Card({
       <div className="flex flex-col justify-evenly grow">
         <div className="flex ">
           {/* Nome */}
-          <h3 className="font-semibold text-[#0f4c50] text-[20px]">{name}</h3>
+          <h3 className="font-semibold text-[#0f4c50] md:text-[20px] text-base">{name}</h3>
         </div>
 
         {/* Precos */}
-        <p className="text-[#2f1b04] text-[14px]">{pricesText}</p>
+        <p className="text-[#2f1b04] md:text-[14px] text-xs">{pricesText}</p>
 
         {/* Descricao - aparece so na impressao */}
         {description?.trim() ? (
@@ -193,10 +234,10 @@ export default function Card({
         ) : null}
       </div>
 
-      {/* Botao - escondido na impressao */}
+      {/* Botao - escondido na impressao e em mobile */}
       <button
         onClick={onOrderClick}
-        className="hide-on-print bg-[#0f4c50] px-6 py-3 rounded-[8px] w-full text-white hover:bg-[#0d4247] transition-colors"
+        className="hidden md:flex hide-on-print bg-[#0f4c50] px-6 py-3 rounded-[8px] w-full text-white hover:bg-[#0d4247] transition-colors items-center justify-center"
       >
         Fazer Pedido
       </button>

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCart } from "../context/CartContext"; // confirme o caminho!
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 
@@ -222,7 +222,7 @@ export default function AddToCartModal({ isOpen, product, imageSources, onClose 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch md:items-center md:justify-center" onClick={(event) => event.stopPropagation()}>
       <style>{`
         @keyframes modal-image-in-next {
           from { transform: translateX(100%); opacity: 0.98; }
@@ -253,16 +253,23 @@ export default function AddToCartModal({ isOpen, product, imageSources, onClose 
       {/* backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
       {/* card */}
-      <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[#0f4c50]">{product.name}</h3>
-          <button type="button" onClick={onClose} aria-label="Fechar">
-            <X className="h-6 w-6 text-gray-600" />
+      <div className="relative z-10 flex h-full w-full flex-col rounded-none bg-white p-5 shadow-xl md:h-auto md:max-h-none md:max-w-md md:rounded-lg" onClick={(event) => event.stopPropagation()}>
+        <div className="sticky top-0 z-30 -mx-5 mb-4 flex items-center gap-2 border-b border-stone-200 bg-white px-5 pb-4 pt-1">
+          <button type="button" onClick={onClose} aria-label="Voltar ao cardápio" className="shrink-0 rounded-full p-1 hover:bg-gray-100">
+            <ChevronLeft className="h-6 w-6 text-[#0f4c50]" />
           </button>
+          <button type="button" onClick={onClose} className="flex items-center gap-2 text-left" aria-label="Voltar ao cardápio">
+            <span className="text-sm font-semibold text-[#0f4c50]">Voltar ao cardápio</span>
+          </button>
+          
         </div>
-
-        {/* Carrossel de imagens */}
-        <div className="relative mb-4 w-full h-[280px] overflow-hidden rounded-lg bg-[#f5f5f5]">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden md:min-h-fit md:flex-none md:overflow-visible">
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1 md:overflow-visible md:pr-0">
+            <div>
+              <h3 className="ml-auto text-lg font-bold text-[#0f4c50] pb-4">{product.name}</h3>  
+            </div>
+            {/* Carrossel de imagens */}
+            <div className="relative mb-4 w-full h-[280px] overflow-hidden rounded-lg bg-[#f5f5f5] md:h-[280px]">
           {isImageAnimating && previousImageIndex !== imageIndex ? (
             <ImageWithFallback
               src={modalImages[previousImageIndex]}
@@ -318,45 +325,46 @@ export default function AddToCartModal({ isOpen, product, imageSources, onClose 
               </div>
             </>
           ) : null}
-        </div>
-        {/* DESCRIÇÃO — somente leitura */}
-        {product.description?.trim() ? (
-          <div className="mt-4 pb-4  ">
-            
-            <div className="mt-1 
-             text-md text-black border-b pb-4">
-              {product.description}
+            </div>
+            {/* DESCRIÇÃO — somente leitura */}
+            {product.description?.trim() ? (
+              <div className="pb-4  ">
+                
+                <div className="mt-1 
+                 text-md text-black border-b pb-4">
+                  {product.description}
+                </div>
+              </div>
+            ) : null}
+
+
+            {/* tamanhos */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[#0f4c50]">Escolha o tamanho:</p>
+              <div className="grid gap-2">
+                {options.map((opt, idx) => (
+                  <label
+                    key={`${opt.name}-${idx}`}
+                    className="flex cursor-pointer items-center justify-between rounded border px-3 py-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="size"
+                        checked={selectedIndex === idx}
+                        onChange={() => setSelectedIndex(idx)}
+                      />
+                      <span>{opt.name}</span>
+                    </div>
+                    <span className="font-medium">{formatBRL(opt.priceCents)}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        ) : null}
 
-
-        {/* tamanhos */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-[#0f4c50]">Escolha o tamanho:</p>
-          <div className="grid gap-2">
-            {options.map((opt, idx) => (
-              <label
-                key={`${opt.name}-${idx}`}
-                className="flex cursor-pointer items-center justify-between rounded border px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="size"
-                    checked={selectedIndex === idx}
-                    onChange={() => setSelectedIndex(idx)}
-                  />
-                  <span>{opt.name}</span>
-                </div>
-                <span className="font-medium">{formatBRL(opt.priceCents)}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* ações */}
-        <div className="mt-5 flex items-center gap-3">
+          {/* ações */}
+          <div className="mt-auto border-t border-stone-200 pt-4 flex items-center gap-3 bg-white">
           <div className="inline-flex h-11 items-center rounded-lg border border-[#d6d6d6] bg-white">
             <button
               type="button"
@@ -412,6 +420,7 @@ export default function AddToCartModal({ isOpen, product, imageSources, onClose 
           >
             Adicionar • {formatBRL(subtotalCents)}
           </button>
+          </div>
         </div>
       </div>
     </div>

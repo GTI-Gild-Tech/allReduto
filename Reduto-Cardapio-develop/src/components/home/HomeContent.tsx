@@ -168,7 +168,7 @@ export function HomeContent() {
             .shadow-md, .shadow-lg, .hover\\:shadow-lg { box-shadow: none !important; }
           }
         `}</style>
-      <div className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-8 py-[50px] relative shrink-0 w-full">
+      <div className="basis-0 box-border content-stretch flex flex-col gap-8 grow items-center justify-start min-h-px min-w-px px-3 md:px-8 py-[50px] relative shrink-0 w-full">
         {/* Título principal */}
         <div className="font-['Retrokia:Demo',_sans-serif] leading-[0] not-italic relative shrink-0 text-[#0f4c50] md:text-5xl text-3xl text-center tracking-[-1.28px]">
           <p className="leading-[1.3] whitespace-pre font-[Retrokia] ">
