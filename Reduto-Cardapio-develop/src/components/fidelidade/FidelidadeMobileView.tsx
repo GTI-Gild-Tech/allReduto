@@ -245,7 +245,7 @@ export function FidelidadeMobileView({ searchTerm, customers }: FidelidadeMobile
                     onClick={() => {
                       handleRedeem(selectedCustomerId!);
                     }}
-                    className="w-full px-4 py-3 bg-[#DBB723] text-[#333] font-medium rounded-lg hover:opacity-90 transition-opacity text-sm"
+                    className="w-full px-4 py-3 bg-[#ddaa5d] text-[#333] font-medium rounded-lg hover:opacity-90 transition-opacity text-sm"
                   >
                     Resgatar Pontos
                   </button>

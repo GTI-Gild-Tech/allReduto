@@ -67,7 +67,7 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
                               ? "bg-[#6b7280] text-white"
                               : record.type === "add"
                               ? "bg-[#0f4c50] text-white"
-                              : "bg-[#fd8d14] text-white"
+                              : "bg-[#b3722d] text-white"
                           }`}
                         >
                           <p className="text-[12px]">
