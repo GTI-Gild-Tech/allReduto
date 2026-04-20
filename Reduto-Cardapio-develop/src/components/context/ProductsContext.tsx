@@ -45,10 +45,37 @@ async function uploadImage(file: File): Promise<string> {
 // "1.234,56" | "1234,56" | "1234.56" | 12.5 -> "1234.56"
 function normalizeMoneyString(v: unknown, fallback = "0.00"): string {
   if (v == null) return fallback;
-  if (typeof v === "number") return (v as number).toString();
+
+  if (typeof v === "number") {
+    return Number.isFinite(v) ? v.toFixed(2) : fallback;
+  }
+
   const s = String(v).trim();
   if (!s) return fallback;
-  return s.replace(/\./g, "").replace(",", ".");
+
+  let normalized = s.replace(/\s/g, "");
+
+  const hasComma = normalized.includes(",");
+  const hasDot = normalized.includes(".");
+
+  if (hasComma && hasDot) {
+    if (normalized.lastIndexOf(",") > normalized.lastIndexOf(".")) {
+      // padrão BR: 1.234,56
+      normalized = normalized.replace(/\./g, "").replace(",", ".");
+    } else {
+      // padrão EN: 1,234.56
+      normalized = normalized.replace(/,/g, "");
+    }
+  } else if (hasComma) {
+    // só vírgula => decimal BR
+    normalized = normalized.replace(",", ".");
+  } else {
+    // só ponto => mantém como decimal
+    normalized = normalized;
+  }
+
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n.toFixed(2) : fallback;
 }
 
 // Normaliza campos de preço dentro de cada size (sem mudar o shape)
