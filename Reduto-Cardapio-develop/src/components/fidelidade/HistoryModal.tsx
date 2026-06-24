@@ -2,6 +2,8 @@ import { Dialog, DialogContent } from "../ui/dialog";
 import { VisuallyHidden } from "../ui/visually-hidden";
 import { DialogTitle, DialogDescription } from "../ui/dialog";
 import { useFidelidade } from "../context/FidelidadeContext";
+import { supabase } from "../../services/supabase";
+import { useEffect, useState } from "react";
 
 interface HistoryModalProps {
   isOpen: boolean;
@@ -12,6 +14,48 @@ interface HistoryModalProps {
 export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps) {
   const { getCustomerById } = useFidelidade();
   const customer = getCustomerById(customerId);
+  const [orderNumberMap, setOrderNumberMap] = useState<Map<string, string>>(new Map());
+  const [isLoadingOrderNumbers, setIsLoadingOrderNumbers] = useState(false);
+
+  useEffect(() => {
+    if (!customer?.history) {
+      setIsLoadingOrderNumbers(false);
+      return;
+    }
+
+    const externalOrderIds = customer.history
+      .map((h) => h.externalOrderId)
+      .filter((id): id is string => !!id);
+
+    if (externalOrderIds.length === 0) {
+      setIsLoadingOrderNumbers(false);
+      return;
+    }
+
+    setIsLoadingOrderNumbers(true);
+
+    const fetchOrderNumbers = async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id, order_number")
+        .in("id", externalOrderIds);
+
+      if (error) {
+        console.error("Erro ao buscar order numbers:", error);
+        setIsLoadingOrderNumbers(false);
+        return;
+      }
+
+      const map = new Map<string, string>();
+      data?.forEach((order) => {
+        map.set(order.id, String(order.order_number));
+      });
+      setOrderNumberMap(map);
+      setIsLoadingOrderNumbers(false);
+    };
+
+    fetchOrderNumbers();
+  }, [customer?.history]);
 
   if (!customer) return null;
 
@@ -43,7 +87,13 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
           <div className="flex flex-col gap-5 w-full">
             <div className="rounded-lg border border-[#c0bab4] bg-[#faf8f5] p-3">
               <div className="flex flex-col gap-3 max-h-[400px] overflow-y-auto pr-1">
-                {customer.history.length === 0 ? (
+                {isLoadingOrderNumbers ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin">
+                      <div className="h-8 w-8 border-4 border-[#0f4c50] border-t-transparent rounded-full"></div>
+                    </div>
+                  </div>
+                ) : customer.history.length === 0 ? (
                   <p className="text-[#797474] text-center py-8">
                     Nenhum histórico encontrado
                   </p>
@@ -55,7 +105,16 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
                     >
                       <div className="flex justify-between items-start gap-3">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[#0f4c50]">{record.description}</p>
+                          <p className="text-[#0f4c50]">
+                            {record.externalOrderId
+                              ? (() => {
+                                  const orderNumber = orderNumberMap.get(record.externalOrderId);
+                                  return orderNumber
+                                    ? `Pedido #${orderNumber}`
+                                    : record.description;
+                                })()
+                              : record.description}
+                          </p>
                           <p className="text-[#797474] text-[12px]">{record.date}{record.time ? ` ${record.time}` : ""}</p>
                           {record.notes && (
                             <p className="text-[#555] text-[12px] italic">{record.notes}</p>
@@ -67,7 +126,7 @@ export function HistoryModal({ isOpen, onClose, customerId }: HistoryModalProps)
                               ? "bg-[#6b7280] text-white"
                               : record.type === "add"
                               ? "bg-[#0f4c50] text-white"
-                              : "bg-[#fd8d14] text-white"
+                              : "bg-[#b3722d] text-white"
                           }`}
                         >
                           <p className="text-[12px]">

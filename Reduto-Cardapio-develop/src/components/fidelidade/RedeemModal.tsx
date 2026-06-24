@@ -95,7 +95,7 @@ export function RedeemModal({ isOpen, onClose, customerId }: RedeemModalProps) {
 
             <div className="relative rounded-lg border border-[#c0bab4] bg-[#faf8f5]">
               <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
-                Pontos a resgatar <span className="text-[#fd8d14]">*</span>
+                Pontos a resgatar <span className="text-[#b3722d]">*</span>
               </span>
               <input
                 type="number"

@@ -93,11 +93,20 @@ export function ProductCard({ product, index, onMove, onReorder, onEdit, onDelet
     drag(drop(node));
   };
 
+const formatMoneyBR = (value: number | string) => {
+  const num = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(num)) return "0,00";
+
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num);
+};
+
 const formatPrices = () =>
   product.sizes
-    .map((s) => `\u00DAnico` === s.size
-      ? `${s.size} - R$ ${Number(s.price).toFixed(2)}`
-      : `${s.size} - R$ ${Number(s.price).toFixed(2)}`
+    .map((s) =>
+      `${s.size} - R$ ${formatMoneyBR(s.price)}`
     )
     .join(" | ");
 

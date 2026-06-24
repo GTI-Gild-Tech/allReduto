@@ -77,7 +77,9 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
   const activeCustomerId = customerId ?? resolvedCustomerId;
   const customer = activeCustomerId ? getCustomerById(activeCustomerId) : undefined;
   const parsedPoints = Number(earnedPoints);
-  const selectedOrderId = selectedOrder ? String(selectedOrder.id) : "";
+  const selectedOrderId = selectedOrder
+    ? String(selectedOrder.orderNumber)
+    : "";
   const alreadyLinkedOrder =
     !!selectedOrderId &&
     customers.some((c) => c.history.some((h) => h.externalOrderId === selectedOrderId));
@@ -153,7 +155,7 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
     }
 
     const selectedOrderTotal = ((selectedOrder.totalCents ?? 0) / 100).toFixed(2).replace(".", ",");
-    const desc = `Pedido ${selectedOrder.id} - R$ ${selectedOrderTotal}`;
+    const desc = `Pedido ${selectedOrderId} - R$ ${selectedOrderTotal}`;
 
     try {
       await addPoints(activeCustomerId, pts, desc, {
@@ -227,7 +229,7 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
             <div ref={customerRef} className="relative">
               <div className="relative rounded-lg border border-[#c0bab4]">
                 <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
-                  Cliente (ou Telefone)<span className="text-[#fd8d14] ml-0.5">*</span>
+                  Cliente (ou Telefone)<span className="text-[#b3722d] ml-0.5">*</span>
                 </span>
                 {activeCustomerId ? (
                   /* pre-selected: just show the name with clear button */
@@ -288,7 +290,7 @@ export function NewRecordModal({ isOpen, onClose, customerId, onSuccess }: NewRe
             <div ref={orderRef} className="relative">
               <div className="relative rounded-lg border border-[#c0bab4]">
                 <span className="absolute -top-[10px] left-3 bg-[#faf8f5] px-1 text-[13px] text-[#0f4c50]">
-                  Pedido<span className="text-[#fd8d14] ml-0.5">*</span>
+                  Pedido<span className="text-[#b3722d] ml-0.5">*</span>
                 </span>
                 <input
                   ref={orderInputRef}
