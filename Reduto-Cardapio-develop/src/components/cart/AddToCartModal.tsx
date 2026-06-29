@@ -26,6 +26,7 @@ type ProductLike = {
   total_price_cents?: number;
   uniquePrice?: number;
   price?: number;
+  temperature?: string[] | null;
 };
 
 type Props = {
@@ -39,6 +40,11 @@ const formatBRL = (cents: number) =>
     style: "currency",
     currency: "BRL",
   });
+
+const formatTemperature = (temp?: string[] | null): string => {
+  if (!temp || temp.length === 0) return '';
+  return temp.map(t => t === 'quente' ? 'Quente' : 'Gelado').join(' | ');
+};
 
 export default function AddToCartModal({ isOpen, product, onClose }: Props) {
   const { addToCart } = useCart();
@@ -114,11 +120,29 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
       {/* card */}
       <div className="relative z-10 w-full max-w-md rounded-lg bg-white p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[#0f4c50]">{product.name}</h3>
+          <div>
+            <h3 className="text-lg font-bold text-[#0f4c50]">{product.name}</h3>
+            {formatTemperature(product.temperature) && (
+              <p className="text-[#797474] text-[13px] mt-1">
+                Temperatura: {formatTemperature(product.temperature)}
+              </p>
+            )}
+          </div>
           <button type="button" onClick={onClose} aria-label="Fechar">
             <X className="h-6 w-6 text-gray-600" />
           </button>
         </div>
+
+         {/* DESCRIÇÃO — somente leitura */}
+        {product.description?.trim() ? (
+          <div className="mt-4">
+            <p className="text-sm font-medium">Descrição:</p>
+            <div className="mt-1 rounded border bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              {product.description}
+            </div>
+          </div>
+        ) : null}
+
 
         {/* tamanhos */}
         <div className="space-y-2">
@@ -168,16 +192,7 @@ export default function AddToCartModal({ isOpen, product, onClose }: Props) {
           </div>
         </div>
 
-        {/* DESCRIÇÃO — somente leitura */}
-        {product.description?.trim() ? (
-          <div className="mt-4">
-            <p className="text-sm font-medium">Descrição:</p>
-            <div className="mt-1 rounded border bg-gray-50 px-3 py-2 text-sm text-gray-700">
-              {product.description}
-            </div>
-          </div>
-        ) : null}
-
+       
         {/* ações */}
         <div className="mt-5 flex gap-3">
           <button

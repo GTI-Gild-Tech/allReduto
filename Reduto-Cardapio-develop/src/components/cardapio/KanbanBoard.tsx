@@ -143,6 +143,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
     uniquePrice: '',
     imageUrl: '' as string,
     is_visible: true,
+    temperature: [] as string[],
   });
 
   useEffect(() => {
@@ -158,7 +159,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       uniquePrice: '',
       imageUrl: product.imageUrl ?? '',
       is_visible: (product as any).is_visible ?? true,
-
+      temperature: product.temperature ?? [],
     });
   } else {
     setFormData({
@@ -172,7 +173,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
       uniquePrice: '',
       imageUrl: '',
       is_visible: true,
-
+      temperature: [],
     });
   }
 }, [product, isOpen, categories]);
@@ -205,6 +206,7 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
     id: product?.id || Date.now().toString(),
     sizes,
     imageUrl: formData.imageUrl || product?.imageUrl || '',
+    temperature: formData.temperature.length > 0 ? formData.temperature : null,
   } as Product, imageFile || undefined);
 
   onClose();
@@ -411,6 +413,49 @@ function EditProductModal({ product, isOpen, onClose, onSave, categories }: Edit
   </label>
 </div>
 
+            {/* Temperatura */}
+<div className="relative shrink-0 w-full">
+  <div
+    className="font-['Open_Sans:Regular',_sans-serif] font-normal leading-[0] mb-2 text-[13px] text-black tracking-[0.52px]"
+    style={{ fontVariationSettings: "'wdth' 100" }}
+  >
+    <p className="leading-[normal] whitespace-pre">Temperatura (opcional)</p>
+  </div>
+  <div className="flex gap-4">
+    <label className="flex items-center gap-2 text-[14px] font-['Open_Sans:Regular',_sans-serif] cursor-pointer">
+      <input
+        type="checkbox"
+        checked={formData.temperature.includes('quente')}
+        onChange={(e) => {
+          setFormData(prev => ({
+            ...prev,
+            temperature: e.target.checked
+              ? [...prev.temperature, 'quente']
+              : prev.temperature.filter(t => t !== 'quente')
+          }));
+        }}
+        className="w-4 h-4 accent-[#0f4c50]"
+      />
+      <span>Quente</span>
+    </label>
+    <label className="flex items-center gap-2 text-[14px] font-['Open_Sans:Regular',_sans-serif] cursor-pointer">
+      <input
+        type="checkbox"
+        checked={formData.temperature.includes('gelado')}
+        onChange={(e) => {
+          setFormData(prev => ({
+            ...prev,
+            temperature: e.target.checked
+              ? [...prev.temperature, 'gelado']
+              : prev.temperature.filter(t => t !== 'gelado')
+          }));
+        }}
+        className="w-4 h-4 accent-[#0f4c50]"
+      />
+      <span>Gelado</span>
+    </label>
+  </div>
+</div>
 
             {/* Descrição */}
             <div className="relative shrink-0 w-full">

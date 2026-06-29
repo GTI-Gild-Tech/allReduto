@@ -27,6 +27,11 @@ module.exports = (sequelize) => {
     type: DataTypes.STRING,
     allowNull: true
     },
+    temperature: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
+    },
         order: {
       type: DataTypes.INTEGER,
       allowNull: false,

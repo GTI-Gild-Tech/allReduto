@@ -168,8 +168,10 @@ const mapProductDTO = (dto: any): Product => {
     imageUrl: toPublicUrl(dto.imageUrl),
 
     is_visible: dto.is_visible ?? dto.isVisible ?? true,
-    
+
     order: dto.order ?? 0,
+
+    temperature: dto.temperature ?? null,
   };
 };
 // ---------- Provider ----------
@@ -295,6 +297,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
           fd.append('is_visible', String((p as any).is_visible ?? true));
+          fd.append('temperature', JSON.stringify(p.temperature || null));
           fd.append('file', imageFile);
 
           const { data } = await api.post('/products', fd, { headers: {} });
@@ -311,6 +314,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             active: (p as any).active ?? 1,
             is_visible: (p as any).is_visible ?? true,
             imageUrl: p.imageUrl ?? null,
+            temperature: p.temperature || null,
           };
           const { data } = await api.post('/products', payload);
           replaceOrInsertProduct(mapProductDTO(data), String(tempId));
@@ -349,6 +353,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           fd.append('stock_qty', String((p as any).stock_qty ?? 0));
           fd.append('active', String((p as any).active ?? 1));
           fd.append('is_visible', String((p as any).is_visible ?? true));
+          fd.append('temperature', JSON.stringify(p.temperature || null));
           fd.append('file', imageFile);
 
           const { data } = await api.put(`/products/${p.id}`, fd, { headers: {} });
@@ -366,6 +371,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             is_visible: (p as any).is_visible ?? true,
 
             imageUrl: p.imageUrl ?? null,
+            temperature: p.temperature || null,
           };
           const { data } = await api.put(`/products/${p.id}`, payload);
           replaceProduct(mapProductDTO(data));

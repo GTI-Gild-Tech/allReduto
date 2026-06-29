@@ -13,6 +13,7 @@ export interface Product {
   imageUrl?: string;     // ← nova: imagem principal (data URL por enquanto)
   is_visible?: boolean;
   order?: number;        // ← ordem do produto dentro da categoria
+  temperature?: string[] | null;
 }
 
 function DeleteIcon() {
@@ -110,6 +111,11 @@ const formatPrices = () =>
     )
     .join(" | ");
 
+const formatTemperature = (temp?: string[] | null): string => {
+  if (!temp || temp.length === 0) return '';
+  return temp.map(t => t === 'quente' ? 'Quente' : 'Gelado').join(' | ');
+};
+
 
   return (
     <div
@@ -128,6 +134,11 @@ const formatPrices = () =>
       {/* Price and action buttons */}
       <div className="content-stretch flex items-center justify-between relative shrink-0 w-full">
         <div className="font-['Rethink_Sans:Regular',_sans-serif] font-normal leading-[0] relative shrink-0 text-[#2f1b04] text-[14px] w-[168px]">
+          {formatTemperature(product.temperature) && (
+            <p className="text-[#797474] text-[12px] mt-1 mb-3">
+              Temperatura:{formatTemperature(product.temperature)}
+            </p>
+          )}
           <p className="leading-[1.4]">{formatPrices()}</p>
         </div>
         <div className="h-[25px] relative shrink-0 w-[49px] flex gap-0">
