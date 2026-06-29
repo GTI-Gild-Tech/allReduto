@@ -3,12 +3,9 @@ import { Product } from "../cardapio/KanbanComponents";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
 import { useProducts } from "../context/ProductsContext";
 import backgroundImage from "../../assets/bg-home.svg";
-import { useRef } from "react";
 
-// ⚠️ IMPORT CORRETO: default export do modal
 import AddToCartModal from "../cart/AddToCartModal";
-import { Printer } from "lucide-react"; // ícone do botão de imprimir
-        {/* Utilitários de impressão (sem CSS externo) */}
+
 // --- Helpers de formatação ---
 
 const formatBRL = (v: number) =>
@@ -16,6 +13,11 @@ const formatBRL = (v: number) =>
     style: "currency",
     currency: "BRL",
   });
+
+const formatTemperature = (temp?: string[] | null): string => {
+  if (!temp || temp.length === 0) return '';
+  return temp.map(t => t === 'quente' ? 'Quente' : 'Gelado').join(' | ');
+};
 
 interface MenuProductCardProps {
   product: Product;
@@ -68,6 +70,13 @@ function MenuProductCard({ product }: MenuProductCardProps) {
         {/* Nome */}
         <h3 className="font-semibold text-[#0f4c50] text-[20px]">{product.name}</h3>
         </div>
+
+        {/* Temperatura */}
+        {formatTemperature(product.temperature) && (
+          <p className="text-[#797474] text-[12px]">
+            {formatTemperature(product.temperature)}
+          </p>
+        )}
 
         {/* Preços */}
         <p className="text-[#2f1b04] text-[14px]">{formatPrices()}</p>
@@ -138,9 +147,6 @@ export function HomeContent() {
   selectedCategory === "todos"
     ? visibleProducts
     : visibleProducts.filter((p) => p.category === selectedCategory);
-
-
-  const handlePrint = () => window.print();
 
   return (
     <div id="homeForprint" className="pt-10">
@@ -227,15 +233,7 @@ export function HomeContent() {
           )}
         </div>
 
-        {/* Botão de imprimir — pequeno, canto inferior direito; só desktop e não imprime */}
-        <button
-          onClick={handlePrint}
-          aria-label="Imprimir"
-          title="Imprimir"
-          className="hide-on-print hidden md:flex fixed right-4 bottom-4 z-50 items-center justify-center p-2 rounded-full bg-[#0f4c50] text-white shadow-md hover:bg-[#0d4247] focus:outline-none"
-        >
-          <Printer className="w-5 h-5" />
-        </button>
+
       </div>
     </div>
   );

@@ -18,7 +18,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Loader2 } from "lucide-react";
+import { exportCardapioPDF } from "../home/exportCardapioPDF";
 
 type PriceType = 'Tamanho' | 'Porção' | 'Único';
 
@@ -37,11 +38,8 @@ interface EditProductModalProps {
   onSave: (product: Product, imageFile?: File) => void;
 }
 
-// em CardapioContent.tsx (ou onde fica o botão)
-export const handleExport = () => {
-  const url = new URL('/dashboard-admin/home', window.location.origin);
-  url.searchParams.set('print', '1'); // flag para ativar o auto-print
-  window.open(url.toString(), '_blank', 'width=1000,height=800');
+export const handleExport = async (products: Product[], categories: string[]) => {
+  await exportCardapioPDF(products, categories);
 };
 
 function BadgeOption({ 
@@ -821,6 +819,7 @@ export function KanbanBoard() {
   const [isEditCategoryModalOpen, setIsEditCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<string>('');
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
 
   // Refs para sincronizar scroll horizontal no topo e no conteúdo
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1026,13 +1025,25 @@ export function KanbanBoard() {
         {/* Header */}
         <div className="content-stretch flex gap-[15px] items-start justify-start relative shrink-0">
           <button
-            onClick={handleExport}
-            className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors"
+            onClick={async () => {
+              setIsExporting(true);
+              try {
+                await handleExport(products, categories);
+              } finally {
+                setIsExporting(false);
+              }
+            }}
+            disabled={isExporting}
+            className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[18px] text-center text-nowrap text-white tracking-[0.2px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-              <p className="leading-none whitespace-pre">Exportar</p>
+              <p className="leading-none whitespace-pre">{isExporting ? 'Exportando...' : 'Exportar'}</p>
             </div>
-            <Download className="size-4 text-white" />
+            {isExporting ? (
+              <Loader2 className="size-4 text-white animate-spin" />
+            ) : (
+              <Download className="size-4 text-white" />
+            )}
           </button>
 
           <DropdownMenu>
