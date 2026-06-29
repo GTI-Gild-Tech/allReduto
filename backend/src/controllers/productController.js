@@ -130,6 +130,8 @@ const createProduct = async (req, res) => {
 
       // ✅
       is_visible,
+
+      temperature: body.temperature ? parseSizes(body.temperature) : null,
     };
 
     const created = await Product.create(payload);
@@ -164,6 +166,8 @@ const updateProduct = async (req, res) => {
       ...(file
         ? { imageUrl: `/uploads/${file.filename}` }
         : (isValidStoredPath(body.imageUrl) ? { imageUrl: body.imageUrl } : {})),
+
+      temperature: body.temperature != null ? parseSizes(body.temperature) : null,
     };
 
     const [updatedRows] = await Product.update(data, { where: { product_id: id } });
