@@ -465,6 +465,13 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           let id = categoryByName[oldName];
           if (!id) {
             await fetchData(); // tenta refrescar
+            // Re-apply the rename after fetchData overwrites state
+            setCategories((prev) =>
+              prev.map((c) => (c === oldName ? newName : c))
+            );
+            setProducts((prev) =>
+              prev.map((p) => (p.category === oldName ? { ...p, category: newName } : p))
+            );
             id = categoryByName[oldName];
           }
           if (!id) throw new Error('Categoria não encontrada para atualizar.');
@@ -570,7 +577,6 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         if (!id) throw new Error('Categoria não encontrada para exclusão.');
 
         await api.delete(`/categories/${encodeURIComponent(id)}`);
-        await fetchData(); // re-sync opcional
       } catch (e) {
         setCategories(prevCats); // rollback
         throw e;
@@ -622,9 +628,6 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           });
           
           console.log('[reorderCategoriesFn] Backend response:', response.data);
-          
-          // Re-fetch para garantir consistência com o backend
-          await fetchData();
         } catch (e) {
           console.error('[reorderCategoriesFn] Error:', e);
           // Rollback para o snapshot

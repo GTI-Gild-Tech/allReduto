@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const { Category } = require("../models");
+const { Category, Product } = require("../models");
 const { Op } = require("sequelize");
 
 // GET /api/categories (lista)
@@ -62,9 +62,20 @@ router.put("/:id", async (req, res) => {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)+/g, "");
 
+    const oldCategory = await Category.findByPk(id);
+    if (!oldCategory) return res.status(404).json({ message: "Categoria não encontrada" });
+    const oldName = oldCategory.name;
+
     await Category.update({ name, slug }, { where: { category_id: id } });
+
+    if (oldName !== name) {
+      await Product.update(
+        { category: name },
+        { where: { category: oldName } }
+      );
+    }
+
     const updated = await Category.findByPk(id);
-    if (!updated) return res.status(404).json({ message: "Categoria não encontrada" });
     res.json(updated);
   } catch (err) {
     console.error("PUT /categories/:id error:", err);
