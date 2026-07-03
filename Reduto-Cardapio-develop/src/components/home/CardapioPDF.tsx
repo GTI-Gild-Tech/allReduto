@@ -21,7 +21,7 @@ export const PAGE_W_MM = 210;
 export const PAGE_H_MM = 297;
 export const PAD_MM = 16;
 const COL_GAP_MM = 8;
-const SAFETY_PX = 20;
+const SAFETY_PX = 40;
 export const BLEED_MM = 0;
 
 export const SHEET_W_MM = PAGE_W_MM + BLEED_MM * 2;
