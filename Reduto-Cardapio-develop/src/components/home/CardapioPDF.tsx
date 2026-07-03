@@ -28,7 +28,7 @@ export const SHEET_W_MM = PAGE_W_MM + BLEED_MM * 2;
 export const SHEET_H_MM = PAGE_H_MM + BLEED_MM * 2;
 
 export const CONTENT_W_PX = (PAGE_W_MM - PAD_MM * 2) * MM_TO_PX;
-export const CONTENT_H_PX = (PAGE_H_MM - PAD_MM * 4) * MM_TO_PX - SAFETY_PX;
+export const CONTENT_H_PX = (PAGE_H_MM - PAD_MM * 3) * MM_TO_PX - SAFETY_PX;
 export const COLUMN_W_PX =
   ((PAGE_W_MM - PAD_MM * 2 - COL_GAP_MM) / 2) * MM_TO_PX;
 
