@@ -21,7 +21,7 @@ export const PAGE_W_MM = 210;
 export const PAGE_H_MM = 297;
 export const PAD_MM = 16;
 const COL_GAP_MM = 8;
-const SAFETY_PX = 40;
+const SAFETY_PX = 30;
 export const BLEED_MM = 0;
 
 export const SHEET_W_MM = PAGE_W_MM + BLEED_MM * 2;
@@ -94,7 +94,7 @@ export function buildBrandElement(): HTMLElement {
     <div style="letter-spacing:0.22em;text-transform:uppercase;font-size:11px;color:${TOKENS.verde};font-weight:600;font-family:'Inter',sans-serif">
       Coffee &amp; Office
     </div>
-    <img src="${logoUrl}" alt="Reduto" style="padding-top:30px;width:540px;height:auto;display:block;margin:0 auto 4px" crossorigin="anonymous" />
+    <img src="${logoUrl}" alt="Reduto" style="padding-top:30px;width:440px;height:auto;display:block;margin:0 auto 4px" crossorigin="anonymous" />
   `;
   return el;
 }
