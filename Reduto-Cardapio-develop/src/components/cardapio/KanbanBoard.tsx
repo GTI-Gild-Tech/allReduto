@@ -38,10 +38,6 @@ interface EditProductModalProps {
   onSave: (product: Product, imageFile?: File) => void;
 }
 
-export const handleExport = async (products: Product[], categories: string[]) => {
-  await exportCardapioPDF(products, categories);
-};
-
 function BadgeOption({ 
   children, 
   isSelected, 
@@ -1028,7 +1024,7 @@ export function KanbanBoard() {
             onClick={async () => {
               setIsExporting(true);
               try {
-                await handleExport(products, categories);
+                await exportCardapioPDF(products, categories);
               } finally {
                 setIsExporting(false);
               }
@@ -1037,7 +1033,7 @@ export function KanbanBoard() {
             className="bg-[#0f4c50] box-border content-stretch flex gap-2.5 items-center justify-center px-6 py-3 relative rounded-[50px] shrink-0 hover:bg-[#0d4247] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <div className="flex flex-col font-['Roboto:Regular',_sans-serif] font-normal justify-center leading-[0] relative shrink-0 text-[18px] text-center text-nowrap text-white tracking-[0.2px]" style={{ fontVariationSettings: "'wdth' 100" }}>
-              <p className="leading-none whitespace-pre">{isExporting ? 'Exportando...' : 'Exportar'}</p>
+              <p className="leading-none whitespace-pre">{isExporting ? 'Carregando...' : 'Exportar'}</p>
             </div>
             {isExporting ? (
               <Loader2 className="size-4 text-white animate-spin" />
