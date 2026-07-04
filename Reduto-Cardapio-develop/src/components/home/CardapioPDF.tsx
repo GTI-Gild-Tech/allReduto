@@ -94,7 +94,7 @@ export function buildBrandElement(): HTMLElement {
     <div style="letter-spacing:0.22em;text-transform:uppercase;font-size:11px;color:${TOKENS.verde};font-weight:600;font-family:'Inter',sans-serif">
       Coffee &amp; Office
     </div>
-    <img src="${logoUrl}" alt="Reduto" style="padding-top:30px;width:440px;height:auto;display:block;margin:0 auto 4px" crossorigin="anonymous" />
+    <img src="${logoUrl}" alt="Reduto" style="padding-top:30px;width:420px;max-width:100%;height:auto;display:block;margin:0 auto 4px" crossorigin="anonymous" />
   `;
   return el;
 }
