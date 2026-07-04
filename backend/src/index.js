@@ -49,6 +49,7 @@ sequelize
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
+      console.log("testando VPS 03/07/2026");
     });
   })
   .catch((err) => {
