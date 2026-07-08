@@ -229,11 +229,27 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         api.get('/categories'),
       ]);
 
-      // produtos
-      setProducts((prodRes.data as any[]).map(mapProductDTO));
+      // produtos – detecta formato da resposta (array direto ou wrapper)
+      const rawProducts = prodRes.data;
+      const productsArray = Array.isArray(rawProducts)
+        ? rawProducts
+        : rawProducts?.data ?? rawProducts?.products ?? rawProducts?.items ?? [];
 
-      // categorias: guardamos nomes (pra UI) e mapeamos name -> id (pra API)
-      const rawCats = (catRes.data as any[]) as CategoryDTO[];
+      if (!Array.isArray(productsArray) || productsArray.length === 0) {
+        console.warn('[ProductsContext] Resposta inesperada da API /products/admin/products:', prodRes.data);
+      }
+
+      setProducts(productsArray.map(mapProductDTO));
+
+      // categorias – detecta formato da resposta
+      const rawCategories = catRes.data;
+      const rawCats: CategoryDTO[] = Array.isArray(rawCategories)
+        ? rawCategories
+        : rawCategories?.data ?? rawCategories?.categories ?? rawCategories?.items ?? [];
+
+      if (!Array.isArray(rawCats) || rawCats.length === 0) {
+        console.warn('[ProductsContext] Resposta inesperada da API /categories:', catRes.data);
+      }
       const catsNormalized = rawCats.map((c) => {
         const id = String(
           c.id ??
