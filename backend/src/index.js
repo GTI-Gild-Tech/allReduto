@@ -21,7 +21,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 
 // Arquivos públicos
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Healthcheck simples
 app.get("/api/ping", (_req, res) => res.json({ ok: true }));
