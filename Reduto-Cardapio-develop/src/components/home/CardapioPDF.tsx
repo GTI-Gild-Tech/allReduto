@@ -43,9 +43,11 @@ export const formatBRL = (v: number) =>
     currency: "BRL",
   });
 
-export const formatTemperature = (temp?: string[] | null): string => {
-  if (!temp || temp.length === 0) return "";
-  return temp
+export const formatTemperature = (temp?: string[] | string | null): string => {
+  if (!temp) return "";
+  const arr = Array.isArray(temp) ? temp : [temp];
+  if (arr.length === 0) return "";
+  return arr
     .map((t) => (t === "quente" ? "Quente" : "Gelado"))
     .join(" | ");
 };

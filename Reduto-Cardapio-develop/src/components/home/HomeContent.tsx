@@ -14,9 +14,11 @@ const formatBRL = (v: number) =>
     currency: "BRL",
   });
 
-const formatTemperature = (temp?: string[] | null): string => {
-  if (!temp || temp.length === 0) return '';
-  return temp.map(t => t === 'quente' ? 'Quente' : 'Gelado').join(' | ');
+const formatTemperature = (temp?: string[] | string | null): string => {
+  if (!temp) return '';
+  const arr = Array.isArray(temp) ? temp : [temp];
+  if (arr.length === 0) return '';
+  return arr.map(t => t === 'quente' ? 'Quente' : 'Gelado').join(' | ');
 };
 
 interface MenuProductCardProps {

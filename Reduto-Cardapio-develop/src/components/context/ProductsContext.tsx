@@ -133,6 +133,26 @@ const toNumber = (v: unknown) => {
   return Number.isFinite(n) ? n : null;
 };
 
+// Normaliza temperature para sempre ser string[] ou null
+const normalizeTemperature = (temp: any): string[] | null => {
+  if (temp == null) return null;
+  if (Array.isArray(temp)) return temp.filter(Boolean);
+  if (typeof temp === 'string') {
+    const trimmed = temp.trim();
+    if (!trimmed) return null;
+    // Se vier JSON array, parseia
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      } catch { /* ignora */ }
+    }
+    // String simples: retorna como array de um elemento
+    return [trimmed];
+  }
+  return null;
+};
+
 // ⚠️ SUBSTITUA o seu mapProductDTO por este:
 const mapProductDTO = (dto: any): Product => {
   // 1) obter sizes do jeito que vier (array, string JSON, null…)
@@ -171,7 +191,7 @@ const mapProductDTO = (dto: any): Product => {
 
     order: dto.order ?? 0,
 
-    temperature: dto.temperature ?? null,
+    temperature: normalizeTemperature(dto.temperature),
   };
 };
 // ---------- Provider ----------
