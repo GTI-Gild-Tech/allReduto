@@ -123,6 +123,7 @@ function formatOrderDTO(dto: any): OrderUI {
         it?.unit_price_cents ??
           it?.unitPriceCents ??
           it?.price_cents ??
+          (it?.unit_price != null ? Math.round(Number(it.unit_price) * 100) : undefined) ??
           Math.round(Number(it?.price ?? 0) * 100)
       ) || 0;
     const quantity = Number(it?.quantity ?? it?.qty ?? 1) || 1;
@@ -132,6 +133,7 @@ function formatOrderDTO(dto: any): OrderUI {
           it?.subtotalCents ??
           it?.total_cents ??
           it?.totalCents ??
+          (it?.line_total != null ? Math.round(Number(it.line_total) * 100) : undefined) ??
           Math.round(unitPriceCents * quantity)
       ) || 0;
 
