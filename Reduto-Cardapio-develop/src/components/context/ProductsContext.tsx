@@ -6,34 +6,27 @@ import React, {
   useCallback,
   useMemo,
   PropsWithChildren,
-} from 'react';
-import axios from 'axios';
-import type { Product } from '../cardapio/KanbanComponents';
+} from "react";
+import type { Product } from "../cardapio/KanbanComponents";
 
 // ---------- Tipos vindos do backend ----------
-type CategoryDTO = { id?: string; category_id?: string | number; name: string; slug?: string };
-type ProductDTO = Product; // ajuste se seu backend devolver outro shape
-
-// ---------- Axios base ----------
-
-import { api } from '../../services/api';
-
-// ---------- URL helper ----------
-const toPublicUrl = (u?: string | null) => {
-  if (!u) return u as any;                       // mantém falsy -> placeholder
-  if (/^https?:\/\//i.test(u)) return u;         // já é absoluta
-  const base = (api.defaults.baseURL || '').replace(/\/api$/, '');
-  const path = u.startsWith('/uploads/') ? u
-            : (u.startsWith('uploads/') ? `/${u}` : `/uploads/${u}`);
-  return `${base}${path}`;
+type CategoryDTO = {
+  id?: string;
+  category_id?: string | number;
+  name: string;
+  slug?: string;
 };
+type ProductDTO = Product;
+
+// ---------- Instância e Helpers Centralizados ----------
+import { api, assetUrl } from "../../services/api";
 
 // ---------- Upload helper (se precisar em outro ponto) ----------
 async function uploadImage(file: File): Promise<string> {
   const fd = new FormData();
-  fd.append('file', file);
-  const { data } = await api.post('/uploads', fd, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+  fd.append("file", file);
+  const { data } = await api.post("/uploads", fd, {
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return data?.url || data?.location || data?.secure_url;
 }
@@ -81,9 +74,15 @@ function normalizeMoneyString(v: unknown, fallback = "0.00"): string {
 // Normaliza campos de preço dentro de cada size (sem mudar o shape)
 function normalizeSizesPrices(sizes: any[] = []): any[] {
   const PRICE_KEYS = [
-    "price", "preco", "valor",
-    "unit_price", "unitPrice",
-    "priceCents", "price_cents", "unit_price_cents", "valor_cents"
+    "price",
+    "preco",
+    "valor",
+    "unit_price",
+    "unitPrice",
+    "priceCents",
+    "price_cents",
+    "unit_price_cents",
+    "valor_cents",
   ];
 
   return sizes.map((s) => {
@@ -117,7 +116,11 @@ type ProductsCtx = {
   updateProduct: (p: Product, imageFile?: File) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   moveProduct: (id: string, newCategory: string) => Promise<void>;
-  reorderProducts: (category: string, productId: string, newIndex: number) => Promise<void>;
+  reorderProducts: (
+    category: string,
+    productId: string,
+    newIndex: number,
+  ) => Promise<void>;
 
   addCategory: (name: string) => Promise<void>;
   updateCategory: (oldName: string, newName: string) => Promise<void>;
@@ -137,15 +140,17 @@ const toNumber = (v: unknown) => {
 const normalizeTemperature = (temp: any): string[] | null => {
   if (temp == null) return null;
   if (Array.isArray(temp)) return temp.filter(Boolean);
-  if (typeof temp === 'string') {
+  if (typeof temp === "string") {
     const trimmed = temp.trim();
     if (!trimmed) return null;
     // Se vier JSON array, parseia
-    if (trimmed.startsWith('[')) {
+    if (trimmed.startsWith("[")) {
       try {
         const parsed = JSON.parse(trimmed);
         if (Array.isArray(parsed)) return parsed.filter(Boolean);
-      } catch { /* ignora */ }
+      } catch {
+        /* ignora */
+      }
     }
     // String simples: retorna como array de um elemento
     return [trimmed];
@@ -161,7 +166,9 @@ const mapProductDTO = (dto: any): Product => {
     try {
       const parsed = JSON.parse(rawSizes);
       if (Array.isArray(parsed)) rawSizes = parsed;
-    } catch { /* ignora */ }
+    } catch {
+      /* ignora */
+    }
   }
 
   // 2) normalizar cada price para número
@@ -185,7 +192,7 @@ const mapProductDTO = (dto: any): Product => {
     category: dto.category,
     description: dto.description,
     sizes,
-    imageUrl: toPublicUrl(dto.imageUrl),
+    imageUrl: assetUrl(dto.imageUrl),
 
     is_visible: dto.is_visible ?? dto.isVisible ?? true,
 
@@ -202,23 +209,25 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   // name -> id
-  const [categoryByName, setCategoryByName] = useState<Record<string, string>>({});
+  const [categoryByName, setCategoryByName] = useState<Record<string, string>>(
+    {},
+  );
 
   // ---------- Helpers de estado ----------
   const replaceProduct = useCallback((p: Product) => {
-    setProducts(prev => prev.map(x => (x.id === p.id ? p : x)));
+    setProducts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
   }, []);
 
   const replaceOrInsertProduct = useCallback((p: Product, tempId?: string) => {
-    setProducts(prev => {
-      const byFinalIdIdx = prev.findIndex(x => x.id === p.id);
+    setProducts((prev) => {
+      const byFinalIdIdx = prev.findIndex((x) => x.id === p.id);
       if (byFinalIdIdx >= 0) {
         const clone = prev.slice();
         clone[byFinalIdIdx] = p;
         return clone;
       }
       if (tempId) {
-        const byTempIdx = prev.findIndex(x => x.id === tempId);
+        const byTempIdx = prev.findIndex((x) => x.id === tempId);
         if (byTempIdx >= 0) {
           const clone = prev.slice();
           clone[byTempIdx] = p;
@@ -230,11 +239,11 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
   }, []);
 
   const removeProduct = useCallback((id: string) => {
-    setProducts(prev => prev.filter(x => x.id !== id));
+    setProducts((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const addProductLocal = useCallback((p: Product) => {
-    setProducts(prev => [p, ...prev]);
+    setProducts((prev) => [p, ...prev]);
   }, []);
 
   // ---------- Hidratar dados ----------
@@ -243,20 +252,24 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setError(null);
     try {
       const [prodRes, catRes] = await Promise.all([
-        api.get('/products/admin/products')
-,
-
-        api.get('/categories'),
+        api.get("/products"),
+        api.get("/categories"),
       ]);
 
       // produtos – detecta formato da resposta (array direto ou wrapper)
       const rawProducts = prodRes.data;
       const productsArray = Array.isArray(rawProducts)
         ? rawProducts
-        : rawProducts?.data ?? rawProducts?.products ?? rawProducts?.items ?? [];
+        : (rawProducts?.data ??
+          rawProducts?.products ??
+          rawProducts?.items ??
+          []);
 
       if (!Array.isArray(productsArray) || productsArray.length === 0) {
-        console.warn('[ProductsContext] Resposta inesperada da API /products/admin/products:', prodRes.data);
+        console.warn(
+          "[ProductsContext] Resposta inesperada da API /products/admin/products:",
+          prodRes.data,
+        );
       }
 
       setProducts(productsArray.map(mapProductDTO));
@@ -265,17 +278,23 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       const rawCategories = catRes.data;
       const rawCats: CategoryDTO[] = Array.isArray(rawCategories)
         ? rawCategories
-        : rawCategories?.data ?? rawCategories?.categories ?? rawCategories?.items ?? [];
+        : (rawCategories?.data ??
+          rawCategories?.categories ??
+          rawCategories?.items ??
+          []);
 
       if (!Array.isArray(rawCats) || rawCats.length === 0) {
-        console.warn('[ProductsContext] Resposta inesperada da API /categories:', catRes.data);
+        console.warn(
+          "[ProductsContext] Resposta inesperada da API /categories:",
+          catRes.data,
+        );
       }
       const catsNormalized = rawCats.map((c) => {
         const id = String(
           c.id ??
-          (c as any).category_id ??
-          (c as any).CategoryId ??
-          (c as any).CategoryID
+            (c as any).category_id ??
+            (c as any).CategoryId ??
+            (c as any).CategoryID,
         );
         const name = (c.name ??
           (c as any).title ??
@@ -287,10 +306,12 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
       setCategories(catsNormalized.map((c) => c.name));
       setCategoryByName(
-        Object.fromEntries(catsNormalized.map((c) => [c.name, c.id]))
+        Object.fromEntries(catsNormalized.map((c) => [c.name, c.id])),
       );
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? e?.message ?? 'Erro ao buscar dados');
+      setError(
+        e?.response?.data?.message ?? e?.message ?? "Erro ao buscar dados",
+      );
     } finally {
       setLoading(false);
     }
@@ -302,8 +323,8 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
 
   const clearJsonHeaders = () => {
     try {
-      delete (api.defaults.headers as any).post?.['Content-Type'];
-      delete (api.defaults.headers as any).put?.['Content-Type'];
+      delete (api.defaults.headers as any).post?.["Content-Type"];
+      delete (api.defaults.headers as any).put?.["Content-Type"];
     } catch {}
   };
 
@@ -314,36 +335,43 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       const tempUrl = imageFile ? URL.createObjectURL(imageFile) : undefined;
 
       // otimista
-      addProductLocal({ ...p, id: String(tempId), imageUrl: p.imageUrl ?? tempUrl });
+      addProductLocal({
+        ...p,
+        id: String(tempId),
+        imageUrl: p.imageUrl ?? tempUrl,
+      });
 
       try {
         // NORMALIZAÇÕES DE PREÇO (vírgula → ponto, cents quando aplicável)
-        const uniquePriceNorm = normalizeMoneyString((p as any).uniquePrice, "0.00");
+        const uniquePriceNorm = normalizeMoneyString(
+          (p as any).uniquePrice,
+          "0.00",
+        );
         const sizesNorm = normalizeSizesPrices(p.sizes || []);
 
         if (imageFile) {
           // ENVIA COMO FORMDATA (com arquivo)
           clearJsonHeaders();
           const fd = new FormData();
-          fd.append('name', p.name);
-          fd.append('category', p.category);
-          fd.append('description', p.description ?? '');
-          fd.append('uniquePrice', uniquePriceNorm); // "12.50"
-          fd.append('sizes', JSON.stringify(sizesNorm));
-          fd.append('stock_qty', String((p as any).stock_qty ?? 0));
-          fd.append('active', String((p as any).active ?? 1));
-          fd.append('is_visible', String((p as any).is_visible ?? true));
-          fd.append('temperature', JSON.stringify(p.temperature || null));
-          fd.append('file', imageFile);
+          fd.append("name", p.name);
+          fd.append("category", p.category);
+          fd.append("description", p.description ?? "");
+          fd.append("uniquePrice", uniquePriceNorm); // "12.50"
+          fd.append("sizes", JSON.stringify(sizesNorm));
+          fd.append("stock_qty", String((p as any).stock_qty ?? 0));
+          fd.append("active", String((p as any).active ?? 1));
+          fd.append("is_visible", String((p as any).is_visible ?? true));
+          fd.append("temperature", JSON.stringify(p.temperature || null));
+          fd.append("file", imageFile);
 
-          const { data } = await api.post('/products', fd, { headers: {} });
+          const { data } = await api.post("/products", fd, { headers: {} });
           replaceOrInsertProduct(mapProductDTO(data), String(tempId));
         } else {
           // SEM arquivo: JSON
           const payload = {
             name: p.name,
             category: p.category,
-            description: p.description ?? '',
+            description: p.description ?? "",
             uniquePrice: uniquePriceNorm,
             sizes: sizesNorm,
             stock_qty: (p as any).stock_qty ?? 0,
@@ -352,7 +380,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             imageUrl: p.imageUrl ?? null,
             temperature: p.temperature || null,
           };
-          const { data } = await api.post('/products', payload);
+          const { data } = await api.post("/products", payload);
           replaceOrInsertProduct(mapProductDTO(data), String(tempId));
         }
       } catch (e) {
@@ -362,43 +390,48 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         if (tempUrl) URL.revokeObjectURL(tempUrl);
       }
     },
-    [addProductLocal, removeProduct, replaceOrInsertProduct]
+    [addProductLocal, removeProduct, replaceOrInsertProduct],
   );
 
   const updateProductFn = useCallback(
     async (p: Product, imageFile?: File) => {
-      const prev = products.find(x => x.id === p.id);
+      const prev = products.find((x) => x.id === p.id);
       if (!prev) return;
 
       replaceProduct(p); // otimista
 
       try {
         // NORMALIZAÇÕES DE PREÇO
-        const uniquePriceNorm = normalizeMoneyString((p as any).uniquePrice, "0.00");
+        const uniquePriceNorm = normalizeMoneyString(
+          (p as any).uniquePrice,
+          "0.00",
+        );
         const sizesNorm = normalizeSizesPrices(p.sizes || []);
 
         if (imageFile) {
           // FORMDATA (com arquivo)
           clearJsonHeaders();
           const fd = new FormData();
-          fd.append('name', p.name);
-          if (p.description != null) fd.append('description', p.description);
-          fd.append('category', p.category);
-          fd.append('uniquePrice', uniquePriceNorm);
-          fd.append('sizes', JSON.stringify(sizesNorm));
-          fd.append('stock_qty', String((p as any).stock_qty ?? 0));
-          fd.append('active', String((p as any).active ?? 1));
-          fd.append('is_visible', String((p as any).is_visible ?? true));
-          fd.append('temperature', JSON.stringify(p.temperature || null));
-          fd.append('file', imageFile);
+          fd.append("name", p.name);
+          if (p.description != null) fd.append("description", p.description);
+          fd.append("category", p.category);
+          fd.append("uniquePrice", uniquePriceNorm);
+          fd.append("sizes", JSON.stringify(sizesNorm));
+          fd.append("stock_qty", String((p as any).stock_qty ?? 0));
+          fd.append("active", String((p as any).active ?? 1));
+          fd.append("is_visible", String((p as any).is_visible ?? true));
+          fd.append("temperature", JSON.stringify(p.temperature || null));
+          fd.append("file", imageFile);
 
-          const { data } = await api.put(`/products/${p.id}`, fd, { headers: {} });
+          const { data } = await api.put(`/products/${p.id}`, fd, {
+            headers: {},
+          });
           replaceProduct(mapProductDTO(data));
         } else {
           // JSON (sem arquivo)
           const payload: any = {
             name: p.name,
-            description: p.description ?? '',
+            description: p.description ?? "",
             category: p.category,
             uniquePrice: uniquePriceNorm,
             sizes: sizesNorm,
@@ -417,10 +450,10 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         throw e;
       }
     },
-    [products, replaceProduct]
+    [products, replaceProduct],
   );
 
-  console.log('[ProductsContext] baseURL =', api.defaults.baseURL);
+  console.log("[ProductsContext] baseURL =", api.defaults.baseURL);
 
   const deleteProductFn: (id: string) => Promise<void> = useCallback(
     async (id) => {
@@ -433,41 +466,52 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         throw e;
       }
     },
-    [products, removeProduct]
+    [products, removeProduct],
   );
 
   const moveProductFn: (id: string, newCategory: string) => Promise<void> =
     useCallback(
       async (id, newCategory) => {
-        console.log('moveProductFn called:', { id, newCategory });
+        console.log("moveProductFn called:", { id, newCategory });
         const prev = products.find((x) => x.id === id);
         if (!prev) {
-          console.log('Product not found:', id);
+          console.log("Product not found:", id);
           return;
         }
 
-        console.log('Moving product:', prev.name, 'from', prev.category, 'to', newCategory);
+        console.log(
+          "Moving product:",
+          prev.name,
+          "from",
+          prev.category,
+          "to",
+          newCategory,
+        );
         const optimistic: Product = { ...prev, category: newCategory };
         replaceProduct(optimistic);
 
         try {
-          console.log('Calling API PATCH /products/' + id, { category: newCategory });
-          const response = await api.patch(`/products/${id}`, { category: newCategory });
-          console.log('API response:', response.data);
-          
+          console.log("Calling API PATCH /products/" + id, {
+            category: newCategory,
+          });
+          const response = await api.patch(`/products/${id}`, {
+            category: newCategory,
+          });
+          console.log("API response:", response.data);
+
           // Atualiza com os dados retornados da API
           if (response.data) {
             const updatedProduct = mapProductDTO(response.data);
-            console.log('Updated product from API:', updatedProduct);
+            console.log("Updated product from API:", updatedProduct);
             replaceProduct(updatedProduct);
           }
         } catch (e) {
-          console.error('Error moving product:', e);
+          console.error("Error moving product:", e);
           replaceProduct(prev); // rollback
           throw e;
         }
       },
-      [products, replaceProduct]
+      [products, replaceProduct],
     );
 
   // ---------- Ações em Categoria ----------
@@ -478,14 +522,14 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         setCategories((prev) => [...prev, name]); // otimista
       }
       try {
-        await api.post('/categories', { name });
+        await api.post("/categories", { name });
         await fetchData(); // pega o id recém-criado e atualiza o mapa
       } catch (e) {
         setCategories((prev) => prev.filter((c) => c !== name)); // rollback
         throw e;
       }
     },
-    [categories, fetchData]
+    [categories, fetchData],
   );
 
   const updateCategoryFn: (oldName: string, newName: string) => Promise<void> =
@@ -495,11 +539,11 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         const prevProds = products;
 
         // otimista: renomeia e faz cascade visual
-        setCategories((prev) =>
-          prev.map((c) => (c === oldName ? newName : c))
-        );
+        setCategories((prev) => prev.map((c) => (c === oldName ? newName : c)));
         setProducts((prev) =>
-          prev.map((p) => (p.category === oldName ? { ...p, category: newName } : p))
+          prev.map((p) =>
+            p.category === oldName ? { ...p, category: newName } : p,
+          ),
         );
 
         try {
@@ -509,16 +553,20 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
             await fetchData(); // tenta refrescar
             // Re-apply the rename after fetchData overwrites state
             setCategories((prev) =>
-              prev.map((c) => (c === oldName ? newName : c))
+              prev.map((c) => (c === oldName ? newName : c)),
             );
             setProducts((prev) =>
-              prev.map((p) => (p.category === oldName ? { ...p, category: newName } : p))
+              prev.map((p) =>
+                p.category === oldName ? { ...p, category: newName } : p,
+              ),
             );
             id = categoryByName[oldName];
           }
-          if (!id) throw new Error('Categoria não encontrada para atualizar.');
+          if (!id) throw new Error("Categoria não encontrada para atualizar.");
 
-          await api.put(`/categories/${encodeURIComponent(id)}`, { name: newName });
+          await api.put(`/categories/${encodeURIComponent(id)}`, {
+            name: newName,
+          });
 
           // atualiza o mapa localmente
           setCategoryByName((m) => {
@@ -536,74 +584,83 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           throw e;
         }
       },
-      [categories, products, categoryByName, fetchData]
+      [categories, products, categoryByName, fetchData],
     );
 
-  const reorderProductsFn: (category: string, productId: string, newIndex: number) => Promise<void> =
-    useCallback(
-      async (category, productId, newIndex) => {
-        console.log('[reorderProductsFn] Reordering:', { category, productId, newIndex });
-        
-        // Snapshot do estado atual para rollback
-        const snapshot = products.slice();
-        
-        const categoryProducts = products
-          .filter((p) => p.category === category)
-          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-        
-        const productIndex = categoryProducts.findIndex((p) => p.id === productId);
-        if (productIndex === -1) {
-          console.warn('[reorderProductsFn] Product not found in category');
-          return;
-        }
-        
-        // Se a posição não mudou, não fazer nada
-        if (productIndex === newIndex) {
-          console.log('[reorderProductsFn] No change in position');
-          return;
-        }
-        
-        // Reordenar localmente (otimista)
-        const [movedProduct] = categoryProducts.splice(productIndex, 1);
-        categoryProducts.splice(newIndex, 0, movedProduct);
-        
-        // Atualizar os índices de ordem
-        const updatedProducts = categoryProducts.map((p, idx) => ({
-          ...p,
-          order: idx
-        }));
-        
-        // Atualizar estado local IMEDIATAMENTE
-        setProducts((prev) => {
-          const otherProducts = prev.filter((p) => p.category !== category);
-          return [...otherProducts, ...updatedProducts];
+  const reorderProductsFn: (
+    category: string,
+    productId: string,
+    newIndex: number,
+  ) => Promise<void> = useCallback(
+    async (category, productId, newIndex) => {
+      console.log("[reorderProductsFn] Reordering:", {
+        category,
+        productId,
+        newIndex,
+      });
+
+      // Snapshot do estado atual para rollback
+      const snapshot = products.slice();
+
+      const categoryProducts = products
+        .filter((p) => p.category === category)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      const productIndex = categoryProducts.findIndex(
+        (p) => p.id === productId,
+      );
+      if (productIndex === -1) {
+        console.warn("[reorderProductsFn] Product not found in category");
+        return;
+      }
+
+      // Se a posição não mudou, não fazer nada
+      if (productIndex === newIndex) {
+        console.log("[reorderProductsFn] No change in position");
+        return;
+      }
+
+      // Reordenar localmente (otimista)
+      const [movedProduct] = categoryProducts.splice(productIndex, 1);
+      categoryProducts.splice(newIndex, 0, movedProduct);
+
+      // Atualizar os índices de ordem
+      const updatedProducts = categoryProducts.map((p, idx) => ({
+        ...p,
+        order: idx,
+      }));
+
+      // Atualizar estado local IMEDIATAMENTE
+      setProducts((prev) => {
+        const otherProducts = prev.filter((p) => p.category !== category);
+        return [...otherProducts, ...updatedProducts];
+      });
+
+      try {
+        // Enviar a nova ordem para o backend
+        const response = await api.patch(`/products/${productId}/reorder`, {
+          category,
+          newOrder: newIndex,
         });
-        
-        try {
-          // Enviar a nova ordem para o backend
-          const response = await api.patch(`/products/${productId}/reorder`, { 
-            category,
-            newOrder: newIndex 
-          });
-          
-          console.log('[reorderProductsFn] Backend response:', response.data);
-          
-          // Atualizar com os dados do backend para garantir consistência
-          if (response.data) {
-            const updatedProduct = mapProductDTO(response.data);
-            setProducts((prev) => 
-              prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-            );
-          }
-        } catch (e) {
-          console.error('[reorderProductsFn] Error:', e);
-          // Rollback para o snapshot
-          setProducts(snapshot);
-          throw e;
+
+        console.log("[reorderProductsFn] Backend response:", response.data);
+
+        // Atualizar com os dados do backend para garantir consistência
+        if (response.data) {
+          const updatedProduct = mapProductDTO(response.data);
+          setProducts((prev) =>
+            prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p)),
+          );
         }
-      },
-      [products]
-    );
+      } catch (e) {
+        console.error("[reorderProductsFn] Error:", e);
+        // Rollback para o snapshot
+        setProducts(snapshot);
+        throw e;
+      }
+    },
+    [products],
+  );
 
   const deleteCategoryFn: (name: string) => Promise<void> = useCallback(
     async (name) => {
@@ -616,7 +673,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
           await fetchData(); // tenta refrescar
           id = categoryByName[name];
         }
-        if (!id) throw new Error('Categoria não encontrada para exclusão.');
+        if (!id) throw new Error("Categoria não encontrada para exclusão.");
 
         await api.delete(`/categories/${encodeURIComponent(id)}`);
       } catch (e) {
@@ -624,61 +681,69 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
         throw e;
       }
     },
-    [categories, categoryByName, fetchData]
+    [categories, categoryByName, fetchData],
   );
 
-  const reorderCategoriesFn: (categoryName: string, newIndex: number) => Promise<void> =
-    useCallback(
-      async (categoryName, newIndex) => {
-        console.log('[reorderCategoriesFn] Reordering:', { categoryName, newIndex });
-        
-        // Snapshot do estado atual para rollback
-        const prevCategories = categories.slice();
-        
-        const categoryIndex = categories.indexOf(categoryName);
-        if (categoryIndex === -1) {
-          console.warn('[reorderCategoriesFn] Category not found');
-          return;
-        }
-        
-        // Se a posição não mudou, não fazer nada
-        if (categoryIndex === newIndex) {
-          console.log('[reorderCategoriesFn] No change in position');
-          return;
-        }
-        
-        // Reordenar localmente (otimista)
-        const updatedCategories = [...categories];
-        const [movedCategory] = updatedCategories.splice(categoryIndex, 1);
-        updatedCategories.splice(newIndex, 0, movedCategory);
-        
-        // Atualizar estado local IMEDIATAMENTE
-        setCategories(updatedCategories);
-        
-        try {
-          // resolve id pelo nome
-          let id = categoryByName[categoryName];
-          if (!id) {
-            await fetchData(); // tenta refrescar
-            id = categoryByName[categoryName];
-          }
-          if (!id) throw new Error('Categoria não encontrada para reordenação.');
+  const reorderCategoriesFn: (
+    categoryName: string,
+    newIndex: number,
+  ) => Promise<void> = useCallback(
+    async (categoryName, newIndex) => {
+      console.log("[reorderCategoriesFn] Reordering:", {
+        categoryName,
+        newIndex,
+      });
 
-          // Enviar a nova ordem para o backend
-          const response = await api.patch(`/categories/${encodeURIComponent(id)}/reorder`, { 
-            newOrder: newIndex 
-          });
-          
-          console.log('[reorderCategoriesFn] Backend response:', response.data);
-        } catch (e) {
-          console.error('[reorderCategoriesFn] Error:', e);
-          // Rollback para o snapshot
-          setCategories(prevCategories);
-          throw e;
+      // Snapshot do estado atual para rollback
+      const prevCategories = categories.slice();
+
+      const categoryIndex = categories.indexOf(categoryName);
+      if (categoryIndex === -1) {
+        console.warn("[reorderCategoriesFn] Category not found");
+        return;
+      }
+
+      // Se a posição não mudou, não fazer nada
+      if (categoryIndex === newIndex) {
+        console.log("[reorderCategoriesFn] No change in position");
+        return;
+      }
+
+      // Reordenar localmente (otimista)
+      const updatedCategories = [...categories];
+      const [movedCategory] = updatedCategories.splice(categoryIndex, 1);
+      updatedCategories.splice(newIndex, 0, movedCategory);
+
+      // Atualizar estado local IMEDIATAMENTE
+      setCategories(updatedCategories);
+
+      try {
+        // resolve id pelo nome
+        let id = categoryByName[categoryName];
+        if (!id) {
+          await fetchData(); // tenta refrescar
+          id = categoryByName[categoryName];
         }
-      },
-      [categories, categoryByName, fetchData]
-    );
+        if (!id) throw new Error("Categoria não encontrada para reordenação.");
+
+        // Enviar a nova ordem para o backend
+        const response = await api.patch(
+          `/categories/${encodeURIComponent(id)}/reorder`,
+          {
+            newOrder: newIndex,
+          },
+        );
+
+        console.log("[reorderCategoriesFn] Backend response:", response.data);
+      } catch (e) {
+        console.error("[reorderCategoriesFn] Error:", e);
+        // Rollback para o snapshot
+        setCategories(prevCategories);
+        throw e;
+      }
+    },
+    [categories, categoryByName, fetchData],
+  );
 
   // ---------- Value memoizado ----------
   const value: ProductsCtx = useMemo(
@@ -716,7 +781,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
       updateCategoryFn,
       deleteCategoryFn,
       reorderCategoriesFn,
-    ]
+    ],
   );
 
   return (
@@ -730,7 +795,7 @@ export const ProductsProvider: React.FC<PropsWithChildren> = ({ children }) => {
 export const useProducts = () => {
   const ctx = useContext(ProductsContext);
   if (!ctx) {
-    throw new Error('useProducts must be used within a ProductsProvider');
+    throw new Error("useProducts must be used within a ProductsProvider");
   }
   return ctx;
 };
