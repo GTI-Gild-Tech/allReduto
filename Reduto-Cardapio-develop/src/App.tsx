@@ -53,6 +53,7 @@ function AppInner() {
 
 export default function App() {
   return (
+    console.log("Iniciou o App React"), // <- para debug
     <AuthProvider>
       <ProductsProvider>
         <CartProvider>
