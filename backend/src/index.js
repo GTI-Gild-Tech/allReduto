@@ -44,8 +44,7 @@ app.use("/api", apiRoutes);
 
 const PORT = Number(process.env.APP_PORT || process.env.PORT || 3001);
 
-sequelize
-  .sync()
+sequelize.sync({ alter: true })
   .then(() => {
     app.listen(PORT, () => {
       console.log(`🚀 Servidor rodando na porta ${PORT}`);
