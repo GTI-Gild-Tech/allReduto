@@ -11,7 +11,6 @@ const parseSizes = (val) => {
   return [];
 };
 
-// aceita 1/0, "1"/"0", true/false, "true"/"false"
 const parseBool01 = (v, defaultValue = 1) => {
   if (v == null || v === '') return defaultValue;
   if (typeof v === 'boolean') return v ? 1 : 0;
@@ -23,19 +22,18 @@ const parseBool01 = (v, defaultValue = 1) => {
   return defaultValue;
 };
 
-// somente aceita caminhos salvos localmente pela API (/uploads/...)
+// ✅ AJUSTE AQUI: Agora aceita URLs completas (S3) e mantém compatibilidade com os uploads locais antigos
 const isValidStoredPath = (u) =>
   typeof u === 'string' &&
-  u.length <= 255 &&
-  (u.startsWith('/uploads/') || u.startsWith('uploads/'));
+  u.length <= 1024 && // URLs do S3 podem ser mais extensas
+  (u.startsWith('/uploads/') || u.startsWith('uploads/') || u.startsWith('http://') || u.startsWith('https://'));
 
 // ---------- CRUD ----------
 
-// ✅ Se este GET é o que o CLIENTE usa, filtre aqui:
 const getAllProducts = async (_req, res) => {
   try {
     const products = await Product.findAll({
-      where: { is_visible: 1 }, // ✅ só visíveis
+      where: { is_visible: 1 },
       order: [
         ['category', 'ASC'],
         ['order', 'ASC'],
@@ -51,7 +49,6 @@ const getAllProducts = async (_req, res) => {
   }
 };
 
-// ✅ (opcional) rota ADMIN sem filtro — use no painel se precisar
 const getAllProductsAdmin = async (_req, res) => {
   try {
     const products = await Product.findAll({
@@ -84,13 +81,7 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   console.log('[createProduct] CT:', req.headers['content-type']);
-  console.log('[createProduct] has file?', !!req.file, req.file && {
-    fieldname: req.file.fieldname,
-    originalname: req.file.originalname,
-    filename: req.file.filename,
-    size: req.file.size,
-  });
-  console.log('[createProduct] body keys:', Object.keys(req.body));
+  console.log('[createProduct] has file?', !!req.file);
 
   try {
     const { body, file } = req;
@@ -100,11 +91,11 @@ const createProduct = async (req, res) => {
 
     const uniquePrice = (body.uniquePrice ?? '').toString().trim() || '0.00';
 
+    // ✅ AJUSTE AQUI: O multer-s3 injeta a URL final pública na propriedade "location"
     const imageUrl = file
-      ? `/uploads/${file.filename}`
+      ? file.location 
       : (isValidStoredPath(body.imageUrl) ? body.imageUrl : null);
 
-    // ordem
     let order = body.order != null ? Number(body.order) : null;
     if (order === null) {
       const maxOrderProduct = await Product.findOne({
@@ -114,7 +105,6 @@ const createProduct = async (req, res) => {
       order = maxOrderProduct ? (maxOrderProduct.order || 0) + 1 : 0;
     }
 
-    // ✅ novo: is_visible (default 1)
     const is_visible = parseBool01(body.is_visible, 1);
 
     const payload = {
@@ -127,10 +117,7 @@ const createProduct = async (req, res) => {
       active: body.active == null ? 1 : Number(body.active),
       imageUrl,
       order,
-
-      // ✅
       is_visible,
-
       temperature: body.temperature ? parseSizes(body.temperature) : null,
     };
 
@@ -159,12 +146,11 @@ const updateProduct = async (req, res) => {
       ...(body.stock_qty != null   ? { stock_qty: Number(body.stock_qty) } : {}),
       ...(body.active != null      ? { active: Number(body.active) } : {}),
       ...(body.order != null       ? { order: Number(body.order) } : {}),
-
-      // ✅ novo: is_visible
       ...(body.is_visible != null  ? { is_visible: parseBool01(body.is_visible, 1) } : {}),
 
+      // ✅ AJUSTE AQUI: O multer-s3 injeta a URL final pública na propriedade "location"
       ...(file
-        ? { imageUrl: `/uploads/${file.filename}` }
+        ? { imageUrl: file.location }
         : (isValidStoredPath(body.imageUrl) ? { imageUrl: body.imageUrl } : {})),
 
       temperature: body.temperature != null ? parseSizes(body.temperature) : null,
@@ -199,7 +185,6 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-// ✅ Corrigido: UM reorderProduct só (sem duplicação)
 const reorderProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -270,7 +255,7 @@ const reorderProduct = async (req, res) => {
 
 module.exports = {
   getAllProducts,
-  getAllProductsAdmin, // ✅ opcional (se você criar rota admin)
+  getAllProductsAdmin,
   getProductById,
   createProduct,
   updateProduct,
