@@ -21,8 +21,7 @@ module.exports = (sequelize) => {
     is_visible: {
   type: DataTypes.BOOLEAN,
   defaultValue: true,
-},
-
+    },
     imageUrl: {
     type: DataTypes.STRING,
     allowNull: true
