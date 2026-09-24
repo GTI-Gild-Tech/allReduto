@@ -21,7 +21,12 @@ module.exports = (sequelize) => {
     is_visible: {
   type: DataTypes.BOOLEAN,
   defaultValue: true,
-},
+    },
+    temperature: {
+      type: DataTypes.JSON, // Serializa e desserializa o array automaticamente
+      allowNull: true,
+      defaultValue: null,
+    },
 
     imageUrl: {
     type: DataTypes.STRING,
