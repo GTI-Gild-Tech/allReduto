@@ -1,0 +1,31 @@
+name: Deploy Backend to EC2
+
+# O script vai rodar sempre que você fizer um push para a branch "Deploy"
+on:
+  push:
+    branches:
+      - deploy_aws 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Conectar via SSH e atualizar o código
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # 1. Navega até a pasta do backend
+            cd /home/ubuntu/allReduto/backend
+            
+            # 2. Puxa as atualizações mais recentes do Git
+            git pull origin deploy_aws
+            
+            # 3. Instala novas dependências (como o multer-s3 e aws-sdk que adicionamos)
+            npm install
+            
+            # 4. Reinicia o processo do PM2
+            pm2 restart api-backend
