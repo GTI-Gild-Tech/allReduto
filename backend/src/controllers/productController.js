@@ -22,10 +22,10 @@ const parseBool01 = (v, defaultValue = 1) => {
   return defaultValue;
 };
 
-// ✅ AJUSTE AQUI: Agora aceita URLs completas (S3) e mantém compatibilidade com os uploads locais antigos
+// Aceita URLs completas (S3) e mantém compatibilidade com os uploads locais antigos
 const isValidStoredPath = (u) =>
   typeof u === 'string' &&
-  u.length <= 1024 && // URLs do S3 podem ser mais extensas
+  u.length <= 1024 &&
   (u.startsWith('/uploads/') || u.startsWith('uploads/') || u.startsWith('http://') || u.startsWith('https://'));
 
 // ---------- CRUD ----------
@@ -80,20 +80,24 @@ const getProductById = async (req, res) => {
 };
 
 const createProduct = async (req, res) => {
-  console.log('[createProduct] CT:', req.headers['content-type']);
-  console.log('[createProduct] has file?', !!req.file);
+  console.log('\n====================================================');
+  console.log('🚀 [POST] INICIANDO CRIAÇÃO DE PRODUTO');
+  console.log('====================================================');
 
   try {
     const { body, file } = req;
+
+    console.log('\n📦 1. O QUE CHEGOU DO FRONTEND (req.body e req.file):');
+    console.log('- Imagem detectada:', file ? 'Sim' : 'Não');
+    console.log('- Corpo bruto:', JSON.stringify(body, null, 2));
 
     if (!body?.name)     return res.status(400).json({ message: "Campo 'name' é obrigatório." });
     if (!body?.category) return res.status(400).json({ message: "Campo 'category' é obrigatório." });
 
     const uniquePrice = (body.uniquePrice ?? '').toString().trim() || '0.00';
 
-    // ✅ AJUSTE AQUI: O multer-s3 injeta a URL final pública na propriedade "location"
     const imageUrl = file
-      ? file.location 
+      ? (file.location ? file.location : `/uploads/${file.filename}`)
       : (isValidStoredPath(body.imageUrl) ? body.imageUrl : null);
 
     let order = body.order != null ? Number(body.order) : null;
@@ -121,10 +125,18 @@ const createProduct = async (req, res) => {
       temperature: body.temperature ? parseSizes(body.temperature) : null,
     };
 
+    console.log('\n⚙️ 2. COMO O BACKEND PROCESSOU (Payload montado para o Banco):');
+    console.log(JSON.stringify(payload, null, 2));
+
     const created = await Product.create(payload);
+
+    console.log('\n✅ 3. O QUE FOI SALVO NO BANCO DE DADOS (Retorno do MySQL):');
+    console.log(JSON.stringify(created.toJSON(), null, 2));
+    console.log('====================================================\n');
+
     return res.status(201).json(created);
   } catch (err) {
-    console.error('POST /api/products error:', err?.original?.sqlMessage || err);
+    console.error('\n❌ ERRO AO CRIAR PRODUTO:', err?.original?.sqlMessage || err);
     return res.status(500).json({
       message: 'Erro ao criar produto.',
       error: err?.original?.sqlMessage || err?.message || String(err),
@@ -133,9 +145,17 @@ const createProduct = async (req, res) => {
 };
 
 const updateProduct = async (req, res) => {
+  console.log('\n====================================================');
+  console.log(`📝 [PUT/PATCH] INICIANDO ATUALIZAÇÃO DO PRODUTO ID: ${req.params.id}`);
+  console.log('====================================================');
+
   try {
     const { id } = req.params;
     const { body, file } = req;
+
+    console.log('\n📦 1. O QUE CHEGOU DO FRONTEND:');
+    console.log('- Imagem detectada:', file ? 'Sim' : 'Não');
+    console.log('- Corpo bruto:', JSON.stringify(body, null, 2));
 
     const data = {
       ...(body.name != null        ? { name: body.name } : {}),
@@ -147,23 +167,33 @@ const updateProduct = async (req, res) => {
       ...(body.active != null      ? { active: Number(body.active) } : {}),
       ...(body.order != null       ? { order: Number(body.order) } : {}),
       ...(body.is_visible != null  ? { is_visible: parseBool01(body.is_visible, 1) } : {}),
-
-      // ✅ AJUSTE AQUI: O multer-s3 injeta a URL final pública na propriedade "location"
+      
       ...(file
-        ? { imageUrl: file.location }
+        ? { imageUrl: file.location ? file.location : `/uploads/${file.filename}` }
         : (isValidStoredPath(body.imageUrl) ? { imageUrl: body.imageUrl } : {})),
-
-      temperature: body.temperature != null ? parseSizes(body.temperature) : null,
+      
+      ...(body.temperature !== undefined ? { temperature: body.temperature ? parseSizes(body.temperature) : null } : {})
     };
 
+    console.log('\n⚙️ 2. COMO O BACKEND PROCESSOU (Payload de Atualização):');
+    console.log(JSON.stringify(data, null, 2));
+
     const [updatedRows] = await Product.update(data, { where: { product_id: id } });
+    
     if (updatedRows === 0) {
+      console.log('⚠️ Nenhum produto encontrado ou nenhuma alteração efetuada.');
       return res.status(404).json({ message: 'Produto não encontrado para atualização.' });
     }
+    
     const updated = await Product.findByPk(id);
+    
+    console.log('\n✅ 3. ESTADO ATUALIZADO NO BANCO DE DADOS:');
+    console.log(JSON.stringify(updated.toJSON(), null, 2));
+    console.log('====================================================\n');
+
     return res.status(200).json(updated);
   } catch (err) {
-    console.error('PUT /api/products/:id error:', err?.original?.sqlMessage || err);
+    console.error('\n❌ ERRO AO ATUALIZAR PRODUTO:', err?.original?.sqlMessage || err);
     return res.status(500).json({
       message: 'Erro ao atualizar produto.',
       error: err?.original?.sqlMessage || err?.message || String(err),
